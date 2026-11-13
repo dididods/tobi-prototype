@@ -147,14 +147,14 @@ appts:[
 {id:8,o:-7,time:"16:00",svc:2,name:"Марія Шевчук",phone:"+380 50 222 33 44",st:"done",paid:true,note:"Алергія на один бренд бази — уточнити"}],
 wait:[{id:1,name:'Софія Гриценко',phone:'+380 68 777 88 99',svc:2,o:1,mode:'after',t1:'15:00',t2:''},{id:2,name:'Вікторія Мазур',phone:'+380 97 888 99 00',svc:1,o:0,mode:'any',t1:'',t2:''}]};
 const $=s=>document.querySelector(s);
-function busy(o,ign){const r=[];S.appts.filter(a=>a.o==o&&a.st!="canc"&&a.id!=ign).forEach(a=>{const s=t2m(a.time);r.push([s,s+(a.svc?sv(a.svc).d:a.dur||30)])});return r}
+function busy(o,ign){const r=[];S.appts.filter(a=>a.o==o&&a.st!="canc"&&a.st!="noshow"&&a.id!=ign).forEach(a=>{const s=t2m(a.time);r.push([s,s+(a.svc?sv(a.svc).d:a.dur||30)])});return r}
 function slots(o,dur,ign){if(isOff(o))return[];const b=busy(o,ign),r=[];for(let m=WH0;m+dur<=WH1;m+=30)r.push({t:m2t(m),f:!b.some(x=>m<x[1]&&m+dur>x[0])});return r}
 function toast(m){$("#ts").innerHTML=`<div class="toast" role="status">${m}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>$("#ts").innerHTML="",2600)}
 function sheet(h){$("#ov").innerHTML=`<div class="ov" onclick="if(event.target==this)closeS()"><div class="sh" role="dialog" aria-modal="true">${h.includes('class="xb"')?'':'<button class="xb sx" aria-label="Закрити" onclick="closeS()">✕</button>'}${h}</div></div>`}
 function closeS(){$("#ov").innerHTML=""}
 function topbar(){return `<div class="top"><span class="bm" aria-hidden="true">Т</span>${TEST?`<div class="seg" title="Тестовий перемикач"><button class="${S.mode=="client"?"on":""}" onclick="mode('client')">Клієнтка</button><button class="${S.mode=="master"?"on":""}" onclick="mode('master')">Кабінет майстра</button></div>`:`<span class="logo">Тобі</span>`}<button class="prof ${S.mode=="master"?"on":""}" aria-label="Кабінет майстра" onclick="mode(S.mode=='master'?'client':'master')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div>`}
 function mode(m){S.mode=m;render();scrollTo(0,0)}
-function render(){$("#app").innerHTML=topbar()+(S.mode=="client"?client():master());
+function render(){autoDone();$("#app").innerHTML=topbar()+(S.mode=="client"?client():master());
 $("#app").insertAdjacentHTML("beforeend",S.mode=="master"?`<nav class="nav"><div>${[["cal","Календар",'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>'],["cl","Клієнтки",'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0m2-13a4 4 0 0 1 0 8m1 2a6 6 0 0 1 3 5"/>'],"+",["rq","Запити",'<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>'],["st","Налаштування",'<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>']].map(x=>x=="+"?`<button class="fab" aria-label="Новий запис" onclick="quick()">＋</button>`:`<button class="${S.tab==x[0]?"on":""}" onclick="S.tab='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}${x[0]=="rq"&&pend()?`<i class="bdg">${pend()}</i>`:""}</button>`).join("")}</div></nav>`:clientNav())}
 /* ---------- CLIENT ---------- */
 function client(){if(S.ct=='prof')return profV();const s=S.sel,st=S.step;
@@ -350,6 +350,7 @@ function profDemo(){S.prof={name:'Олена Коваль',phone:'+380 67 111 22
    треба зменшити на кількість днів, що минули, інакше записи «поїдуть» на день уперед. */
 function shiftDays(n){if(!n)return;S.appts.forEach(a=>a.o-=n);S.reqs.forEach(r=>{r.o-=n;if(r.po!=null)r.po-=n});S.wait.forEach(w=>w.o-=n);S.offs.forEach(x=>{if(x.t=='d'){x.a-=n;x.b-=n}});
 S.day-=n;S.sel.day-=n;if(S.sel.day<0){S.sel.day=0;S.sel.time=null}if(S.wf&&S.wf.o!=null)S.wf.o-=n;S.cm={b:0,w:0}}
+setInterval(()=>{if(autoDone())render()},60000);/* автозавершення щохвилини */
 S.t0=T0();setInterval(()=>{const t=T0();if(t!==S.t0){const n=Math.round((t-S.t0)/864e5);S.t0=t;shiftDays(n);closeS();render()}},30000);
 function dayV(){const l=S.appts.filter(a=>a.o==S.day).sort((a,b)=>t2m(a.time)-t2m(b.time)),act=l.filter(a=>!["canc","block"].includes(a.st)),inc=act.filter(a=>a.st!="noshow"&&a.svc).reduce((s,a)=>s+(a.paid?sv(a.svc).p:0),0);
 const off=isOff(S.day);let h=`<h1>${wd(S.day)}, ${fd(S.day)}</h1>${(n=>n?`<div class="hero"><small>Наступний запис</small><b>${n.time} · ${esc(n.name)}</b><span>${esc(sv(n.svc).n)}</span><button onclick="open_(${n.id})">Відкрити</button></div>`:"")(act.find(a=>["new","conf"].includes(a.st)&&a.svc&&en0(a)>Date.now()))}
@@ -364,26 +365,46 @@ const st0=a=>D(a.o).getTime()+t2m(a.time)*6e4,en0=a=>st0(a)+(a.svc?sv(a.svc).d:3
 function edMv(id){return `<button class="btn g" style="margin:0" onclick="editA(${id})">Редагувати</button><button class="btn g" style="margin:0" onclick="moveS(${id})">Перенести</button>`}
 function open_(id){const a=S.appts.find(x=>x.id==id),v=a.svc?sv(a.svc):null;
 if(a.st=="block")return sheet(`<h2>Блок часу</h2><p>${wd(a.o)}, ${fd(a.o)} о ${a.time}</p><button class="btn g" onclick="del(${id})">Зняти блок</button>`);
-const s=a.st,dead=s=='canc'||s=='noshow',started=Date.now()>=st0(a),ended=Date.now()>=en0(a);
+const s=a.st,dead=s=='canc'||s=='noshow',started=Date.now()>=st0(a),ended=Date.now()>=en0(a),fix='display:block;margin:10px auto 0;color:var(--bad)';
 const msg={canc:'Запис скасовано: клієнтка попередила, що не прийде.',noshow:'Клієнтка не прийшла у призначений час.'}[s]||'';
 let act='';
-if(s=='new')act=`<button class="btn" onclick="setSt(${id},'conf')">Підтвердити</button><div class="g2" style="margin-top:10px">${edMv(id)}</div><button class="back" style="display:block;margin:8px auto 0;color:var(--bad)" onclick="askSt(${id},'canc')">Відхилити запис</button>`;
-else if(s=='conf')act=`<button class="btn" ${started?'':'disabled'} onclick="setSt(${id},'done')">Завершити</button><p class="sm mu" style="margin:6px 2px 0;text-align:center">${!started?'Стане доступною з '+hm(st0(a)):!ended?'Процедура триває до '+hm(en0(a)):'Час запису минув'}</p><div class="g2" style="margin-top:10px">${edMv(id)}</div><button class="btn g" style="margin-top:10px" onclick="moreA(${id})">Інші дії</button>`;
-else if(s=='done')act=`<button class="btn g" onclick="editA(${id})">Редагувати дані візиту</button>`;
+if(s=='new')act=`<button class="btn" onclick="setSt(${id},'conf')">Підтвердити</button><div class="g2" style="margin-top:10px">${edMv(id)}</div><button class="back" style="${fix}" onclick="askSt(${id},'canc')">Відхилити запис</button>`;
+else if(s=='conf')act=`<button class="btn" ${started?'':'disabled'} onclick="setSt(${id},'done')">Завершити</button><p class="sm mu" style="margin:6px 2px 0;text-align:center">${!started?'Стане доступною з '+hm(st0(a)):!ended?'Процедура триває до '+hm(en0(a))+', потім завершиться автоматично':'Час запису минув'}</p>${started?`<button class="btn g" style="margin-top:8px;color:var(--bad)" onclick="askSt(${id},'noshow')">Клієнтка не прийшла</button>`:''}<div class="g2" style="margin-top:10px">${edMv(id)}</div><button class="btn g" style="margin-top:10px" onclick="moreA(${id})">Інші дії</button>`;
+else if(s=='done')act=`${a.auto?`<p class="sm mu" style="margin:0 2px 10px;text-align:center">Завершено автоматично о ${hm(a.auto)}</p>`:''}<button class="btn g" onclick="editA(${id})">Редагувати дані візиту</button><button class="back" style="${fix}" onclick="askSt(${id},'noshow')">Клієнтка не прийшла? Виправити статус</button>`;
+else if(s=='noshow')act=`<button class="btn g" onclick="askSt(${id},'done')">Клієнтка все ж була — позначити завершеним</button>`;
+else if(s=='canc')act=`<button class="btn g" onclick="askSt(${id},'restore')">Відновити запис</button>`;
 sheet(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">${esc(a.name)}</h2><div class="row2" style="gap:8px"><span class="chip ${a.st}">${ST[a.st]}</span><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div></div><p class="mu" style="margin:0">${esc(a.phone)}</p>
 <div class="card"><b>${esc(v.n)}</b><div class="sm mu">${wd(a.o)}, ${fd(a.o)} о ${a.time} · ${v.d} хв · ${v.p} ₴</div>${a.cm?`<div class="sm" style="margin-top:6px">💬 ${esc(a.cm)}</div>`:""}</div>
 ${msg?`<div class="cq sm">${msg}</div>`:''}
 ${dead?'':`<div class="row2"><span>Оплачено</span><button class="tog ${a.paid?"on":""}" aria-label="Оплата" onclick="S.appts.find(x=>x.id==${id}).paid=!${a.paid};S.appts.find(x=>x.id==${id}).seen=true;open_(${id});render()"></button></div>`}
 <label class="f">Моя нотатка</label><textarea onchange="S.appts.find(x=>x.id==${id}).note=this.value">${esc(a.note)}</textarea>
 <div style="margin-top:12px">${act}</div>`)}
-function stOk(a,s){const n=Date.now();if(a.st=='new')return s=='conf'||s=='canc';if(a.st=='conf')return s=='canc'||(s=='done'&&n>=st0(a))||(s=='noshow'&&n>=en0(a));return false}
-function setSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}a.st=s;closeS();render();if(s=='canc')offer(a);else toast(ST[s])}
-function askSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}const rj=s=='canc'&&a.st=='new',m=s=='noshow'?['Клієнтка не прийшла?','Запис буде позначено як неявку. Це не завершений візит.','Так, не прийшла']:rj?['Відхилити запис?','Запис не буде підтверджено, час звільниться в календарі.','Так, відхилити']:['Скасувати запис?','Клієнтка попередила, що не прийде. Час звільниться в календарі.','Так, скасувати'];
-sheet(`<h2 style="margin-top:0">${m[0]}</h2><p class="mu" style="margin:0">${esc(a.name)} · ${dl(a.o,a.time)}</p><p class="sm">${m[1]}</p><button class="btn" style="background:var(--bad);box-shadow:none" onclick="setSt(${id},'${s}')">${m[2]}</button><button class="btn g" onclick="open_(${id})">Назад</button>`)}
-function moreA(id){const a=S.appts.find(x=>x.id==id);if(!a||a.st!='conf'){open_(id);return}const ended=Date.now()>=en0(a);
+/* Єдине місце з правилами статусів.
+   Новий → підтвердити / відхилити. Підтверджений → скасувати; завершити й «не прийшла» — з моменту початку.
+   Виправлення вручну: завершений ↔ неявка; скасований → відновити (у попередній статус). */
+function stOk(a,s){const n=Date.now();if(a.st=='new')return s=='conf'||s=='canc';if(a.st=='conf')return s=='canc'||((s=='done'||s=='noshow')&&n>=st0(a));if(a.st=='done')return s=='noshow';if(a.st=='noshow')return s=='done';if(a.st=='canc')return s=='restore';return false}
+/* Автозавершення: підтверджений запис після закінчення свого часу стає завершеним і оплаченим.
+   Скасовані, неявки й непідтверджені («Новий») не змінюються. */
+function autoDone(){const n=Date.now();let k=0;S.appts.forEach(a=>{if(a.st=='conf'&&a.svc&&n>=en0(a)){a.st='done';a.auto=en0(a);a.paid=true;k++}});return k}
+function setSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}
+const from=a.st,to=s=='restore'?(a.prev||'conf'):s;
+if((from=='canc'||from=='noshow')&&to!='canc'&&to!='noshow'){const m=t2m(a.time),d=sv(a.svc).d;if(busy(a.o,a.id).some(b=>m<b[1]&&m+d>b[0])){toast('Цей час уже зайнятий іншим записом. Створіть новий запис на вільний час');open_(id);return}}
+if(to=='canc')a.prev=from;a.st=to;a.seen=true;if(to=='done'){a.paid=true;delete a.auto}if(to=='noshow')a.paid=false;
+closeS();render();
+if(to=='canc'&&from!='new')offer(a);
+else if(to=='noshow'&&from=='conf'&&a.o==0&&Date.now()<en0(a)){const st=Math.max(t2m(a.time),Math.ceil(nowMin()/10)*10),en=t2m(a.time)+sv(a.svc).d;if(en-st>=30)offer({...a,time:m2t(st)},'Неявку позначено');else toast(ST.noshow)}
+else toast(s=='restore'?'Запис відновлено':to=='canc'&&from=='new'?'Запис відхилено':ST[to])}
+function askSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}const rj=s=='canc'&&a.st=='new',early=s=='noshow'&&a.st=='conf'&&Date.now()<en0(a);
+const m=s=='noshow'?(a.st=='done'?['Клієнтка не прийшла?','Візит буде позначено як неявку замість завершеного, позначку оплати буде знято.','Так, не прийшла']:['Клієнтка не прийшла?','Запис буде позначено як неявку. Це не завершений візит.'+(early?' Решта часу до '+hm(en0(a))+' звільниться в календарі.':''),'Так, не прийшла'])
+:s=='done'?['Клієнтка все ж була?','Запис стане завершеним візитом і буде позначений як оплачений.','Так, позначити завершеним']
+:s=='restore'?['Відновити запис?','Запис повернеться зі статусом «'+ST[a.prev||'conf']+'», час '+a.time+' знову буде зайнятий.','Відновити запис']
+:rj?['Відхилити запис?','Запис не буде підтверджено, час звільниться в календарі.','Так, відхилити']:['Скасувати запис?','Клієнтка попередила, що не прийде. Час звільниться в календарі.','Так, скасувати'];
+const red=s=='noshow'||s=='canc';
+sheet(`<h2 style="margin-top:0">${m[0]}</h2><p class="mu" style="margin:0">${esc(a.name)} · ${dl(a.o,a.time)}</p><p class="sm">${m[1]}</p><button class="btn" ${red?'style="background:var(--bad);box-shadow:none"':''} onclick="setSt(${id},'${s}')">${m[2]}</button><button class="btn g" onclick="open_(${id})">Назад</button>`)}
+function moreA(id){const a=S.appts.find(x=>x.id==id);if(!a||a.st!='conf'){open_(id);return}const started=Date.now()>=st0(a);
 sheet(`<button class="back" onclick="open_(${id})">← Назад</button><div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Інші дії</h2><p class="mu sm" style="margin:0">${esc(a.name)} · ${dl(a.o,a.time)}</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div>
 <button class="card ap" style="margin:12px 0 8px" onclick="askSt(${id},'canc')"><div class="b"><b>Скасувати запис</b><div class="sm mu">Клієнтка попередила, що не прийде</div></div></button>
-<button class="card ap ${ended?'':'x'}" ${ended?'':'disabled'} style="margin:8px 0" onclick="askSt(${id},'noshow')"><div class="b"><b>Клієнтка не прийшла</b><div class="sm mu">${ended?'Час запису минув, а клієнтка не з’явилась':'Доступно після '+dl(a.o,hm(en0(a)))}</div></div></button>`)}
+<button class="card ap ${started?'':'x'}" ${started?'':'disabled'} style="margin:8px 0" onclick="askSt(${id},'noshow')"><div class="b"><b>Клієнтка не прийшла</b><div class="sm mu">${started?'Запис почався, а клієнтки немає':'Доступно з '+hm(st0(a))}</div></div></button>`)}
 function del(id){S.appts=S.appts.filter(a=>a.id!=id);closeS();render()}
 function moveS(id){const a=S.appts.find(x=>x.id==id);sheet(`<h2>Перенести запис</h2><p class="mu sm" style="margin:0">${esc(a.name)} · ${esc(sv(a.svc).n)}</p><div class="g2 dt"><div><label class="f">Дата</label><select id="mo" onchange="mFill(${id},1)"></select></div><div><label class="f">Година</label><select id="mt"></select></div></div><p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p><button class="btn" onclick="doMove(${id})">Зберегти</button>`);mFill(id,0,a.o,a.time)}
 function mFill(id,only,io,it){const a=S.appts.find(x=>x.id==id),d=sv(a.svc).d,ds=$("#mo"),ts=$("#mt");
@@ -392,7 +413,7 @@ const sl=slots(+ds.value,d,id),cur=only?ts.value:it;ts.innerHTML=sl.map(x=>`<opt
 function doMove(id){const a=S.appts.find(x=>x.id==id),o=+$("#mo").value,t=$("#mt").value;if(!t){toast("У цей день немає вільного часу");return}const d=sv(a.svc).d,s=t2m(t);
 const bad=busy(o,id).some(b=>s<b[1]&&s+d>b[0])||s<WH0||s+d>WH1;if(bad){toast("Цей час недоступний: він зайнятий або поза робочими годинами");return}
 a.o=o;a.time=t;a.seen=true;closeS();S.day=o;render();toast("Запис перенесено")}
-function offer(a){const c=S.wait.slice().sort((x,y)=>wfit(y,a)-wfit(x,a));if(!c.length){toast("Скасовано. Список очікування порожній");return}
+function offer(a,lb){const c=S.wait.slice().sort((x,y)=>wfit(y,a)-wfit(x,a));if(!c.length){toast((lb||"Скасовано")+". Список очікування порожній");return}
 sheet(`<h2>Звільнилось вікно ${a.time}</h2><p class="mu sm">${wd(a.o)}, ${fd(a.o)}. Оберіть, кому запропонувати — повідомлення піде лише вибраним.</p>${c.map(w=>`<label class="card row2" style="cursor:pointer"><span><b>${esc(w.name)}</b>${wfit(w,a)?' <span class="chip conf">Підходить</span>':''}<br><span class="sm mu">${esc(sv(w.svc).n)}</span><br><span class="sm mu">Бажано: ${wd(w.o)}, ${fd(w.o)} · ${wcond(w)}</span></span><input type="checkbox" class="wc" style="width:22px;height:22px" ${wfit(w,a)?"checked":""}></label>`).join("")}
 <button class="btn" onclick="sendOffer()">Запропонувати вибраним</button><button class="btn g" onclick="closeS()">Не пропонувати</button>`)}
 function sendOffer(){const n=[...document.querySelectorAll(".wc")].filter(x=>x.checked).length;closeS();toast(n?`Пропозицію надіслано: ${n} (демо)`:"Нікого не вибрано")}
