@@ -110,6 +110,13 @@ input.bad,select.bad,textarea.bad{border-color:var(--bad);background:#fff5f6}
 #sp .t1{color:transparent;background:linear-gradient(105deg,#fff0 42%,#ffffffe6 50%,#fff0 58%) 150% 0/250% 100% no-repeat,linear-gradient(120deg,#2b1b6b,#a2408f 42%,#ff6fa5 62%,#7d5be0);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 20px #f2528a40);animation:spsh 2.2s ease-in-out 1.2s forwards}
 @keyframes spsh{to{background-position:-60% 0,0 0}}
 @media(prefers-reduced-motion:reduce){#sp .tb{opacity:1;filter:none;transform:none;letter-spacing:-.01em;animation:none}#sp .t1{animation:none}}
+/* Етап 1: нові записи, лічильник уваги, розділи «Запитів» */
+.lk .n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin:0 2px 0 4px;border-radius:9px;background:var(--ac);color:#fff;font-size:11px;font-weight:800;vertical-align:1px}
+.lk0{color:var(--mu);font-weight:600;font-size:13px;white-space:nowrap}
+.mini .pd{font-size:12px;font-weight:700;color:var(--acd);padding:0;white-space:nowrap}
+.mini .pd0{color:var(--mu);white-space:nowrap}
+.seg button .k{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--ac2);color:var(--acd);font-size:11px;font-weight:800}
+.seg button.on .k{background:var(--ac);color:#fff}
 </style></head><body>
 <div id="app"></div><div id="ov"></div><div id="ts"></div>
 <div id="sp" aria-hidden="true"><div class="tb"><span class="t1">Тобі</span></div><canvas id="spc"></canvas></div>
@@ -230,7 +237,11 @@ S.wait.push({id:S.id++,name:f.name.trim(),phone:f.phone.trim(),svc:+f.svc,o:f.o,
 /* ---------- MASTER ---------- */
 function master(){return S.tab=="cal"?cal():S.tab=="cl"?clients():S.tab=="rq"?reqs():S.tab=="st"?stg():cal()}
 function stg(){const t=S.sset||'sv';return `<h1>Налаштування</h1><div class="seg vw">${[['sv','Послуги'],['rm','Нагадування']].map(v=>`<button class="${t==v[0]?'on':''}" onclick="S.sset='${v[0]}';render()">${v[1]}</button>`).join('')}</div>`+(t=='sv'?svcs():rem())}
-function pend(){return S.reqs.filter(r=>r.st=='pending').length}
+/* Що чекає рішення майстрині — ЄДИНЕ правило для лічильника в календарі, бейджа й вкладки «Запити».
+   Не залежить від обраного дня. new — записи «Новий» (самозапис клієнток, зокрема з минулим часом)
+   і запити на новий запис; move — запити на перенесення. */
+function attn(){const r=S.reqs.filter(x=>x.st=='pending'),a=S.appts.filter(x=>x.st=='new'&&x.svc);return{a,rn:r.filter(x=>x.type!='move'),rm:r.filter(x=>x.type=='move')}}
+function pend(){const t=attn();return t.a.length+t.rn.length+t.rm.length}
 function pl(n,a,b,c){const m=n%10,h=n%100;return h>10&&h<20?c:m==1?a:m>1&&m<5?b:c}
 function cr(m){const d=new Date(Date.now()-m*6e4),n=new Date(),t=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),y=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);return(y<1?'Сьогодні':y==1?'Вчора':d.getDate()+' '+MN[d.getMonth()])+', '+t}
 function dl(o,t){return wd(o)+', '+fd(o)+' · '+t}
@@ -243,9 +254,19 @@ ${mv?`<div class="cmp"><div><small>Зараз</small><b>${a?dl(a.o,a.time):'—'
 ${r.cm?`<div class="cq sm">💬 ${esc(r.cm)}</div>`:''}
 ${c=='busy'?`<div class="wn">Цей час уже зайнятий. Відхиліть запит або узгодьте інший час із клієнткою.</div>`:c=='gone'?`<div class="wn">Початковий запис уже недоступний. Відхиліть запит.</div>`:c=='past'?`<div class="wn">Бажаний час уже минув. Запропонуйте інший час або відхиліть запит.</div>`:''}
 <button class="btn" ${c=='ok'?'':'disabled'} onclick="rqAct(${r.id},1)">${mv?'Підтвердити перенесення':'Підтвердити запис'}</button><button class="btn ${c=='ok'?'g':''}" onclick="offerT(${r.id})">Запропонувати інший час</button><button class="btn g" style="color:var(--bad)" onclick="rqAct(${r.id},0)">Відхилити</button></div>`}
-function reqs(){const p=S.reqs.filter(r=>r.st=='pending').sort((a,b)=>a.ago-b.ago),d=S.reqs.filter(r=>r.st!='pending'),n=p.length;
-return `<div class="row2"><h1>Запити</h1>${n?`<span class="cnt" aria-label="Потребують дії">${n}</span>`:''}</div><p class="mu sm" style="margin:0 0 4px">${n?n+' '+pl(n,'запит потребує','запити потребують','запитів потребують')+' дії':'Нових запитів немає'}</p>
-${n?p.map(rqCard).join(''):`<div class="card emp"><div class="ok">✓</div><h2>Усе опрацьовано</h2><p class="mu sm" style="margin:0">Нові запити від клієнток з’являтимуться тут.</p></div>`}
+/* Картка самозапису клієнтки у «Запитах»: запис уже стоїть у календарі, але чекає підтвердження */
+function apReq(a){const v=sv(a.svc),past=Date.now()>=en0(a);
+return `<div class="card"><div class="row2"><b>${esc(a.name)}</b><span class="chip new">Очікує підтвердження</span></div><div class="sm mu">${esc(a.phone)}</div>
+<div class="row2" style="margin-top:10px"><span class="chip done">Самозапис · уже в календарі</span>${a.cat?`<span class="sm mu">${cr((Date.now()-a.cat)/6e4)}</span>`:''}</div>
+<div class="cmp"><div><small>Запис на</small><b>${dl(a.o,a.time)}</b></div></div>
+<div class="row2 sm"><span>${esc(v.n)}</span><b class="price">${v.p} ₴</b></div>
+${a.cm?`<div class="cq sm">💬 ${esc(a.cm)}</div>`:''}
+${past?`<div class="wn">Час запису минув, а запис так і не підтвердили. Відкрийте його, щоб уточнити статус.</div>`:`<button class="btn" onclick="setSt(${a.id},'conf')">Підтвердити запис</button>`}<button class="btn g" onclick="open_(${a.id})">Відкрити запис</button></div>`}
+function reqs(){const t=attn(),d=S.reqs.filter(r=>r.st!='pending'),n=pend(),nn=t.a.length+t.rn.length,nm=t.rm.length,g=S.rqt||(nn||!nm?'new':'move');
+const nw=[...t.a.map(a=>({k:a.o*1440+t2m(a.time),h:apReq(a)})),...t.rn.map(r=>({k:r.o*1440+t2m(r.t),h:rqCard(r)}))].sort((x,y)=>x.k-y.k).map(x=>x.h).join(''),mv=t.rm.slice().sort((a,b)=>a.ago-b.ago).map(rqCard).join('');
+return `<div class="row2"><h1>Запити</h1>${n?`<span class="cnt" aria-label="Потребують дії">${n}</span>`:''}</div><p class="mu sm" style="margin:0 0 4px">${n?'Потребують вашого рішення: '+n:'Нічого не чекає підтвердження'}</p>
+${n?`<div class="seg vw" role="tablist">${[['new','Нові',nn],['move','Перенесення',nm]].map(x=>`<button role="tab" aria-selected="${g==x[0]}" class="${g==x[0]?'on':''}" onclick="S.rqt='${x[0]}';render()">${x[1]}<span class="k">${x[2]}</span></button>`).join('')}</div>
+${g=='new'?nw||'<div class="brk">Нових записів, що чекають підтвердження, немає.</div>':mv||'<div class="brk">Запитів на перенесення немає.</div>'}`:`<div class="card emp"><div class="ok">✓</div><h2>Усе опрацьовано</h2><p class="mu sm" style="margin:0">Нові записи й запити від клієнток з’являтимуться тут.</p></div>`}
 ${d.length?`<h2 style="margin-top:18px">Опрацьовані</h2><div class="card" style="padding:4px 14px">${d.map(r=>`<div class="pr"><span><b>${esc(r.name)}</b><br><span class="sm mu">${r.st=='offer'?'Запропоновано '+dl(r.po,r.pt):(r.type=='move'?'Перенесення':'Новий запис')+' · '+dl(r.o,r.t)}</span></span><span class="chip ${r.st=='done'?'conf':r.st=='offer'?'new':'canc'}">${r.st=='done'?'Підтверджено':r.st=='offer'?'Очікує відповіді':'Відхилено'}</span></div>`).join('')}</div>`:''}`}
 let LK=false;
 function rqAct(id,ok){if(LK)return;LK=true;try{const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;
@@ -266,7 +287,7 @@ const k=id?S.appts.filter(a=>a.svc==id&&a.o>=0&&['new','conf'].includes(a.st)&&(
 toast(k?`Збережено. Перевірте календар: ${k} ${pl(k,'запис тепер накладається','записи тепер накладаються','записів тепер накладаються')} на інші або виходять за робочі години`:id?"Збережено":"Послугу додано")}
 const MNN=["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
 function rng(){const d=D(S.day);if(S.view=="week"){const s=S.day-((d.getDay()+6)%7);return[s,s+6]}if(S.view=="month"){const s=S.day-d.getDate()+1;return[s,s+new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-1]}return[S.day,S.day]}
-function calHead(){const[a,b]=rng(),L=S.appts.filter(x=>x.o>=a&&x.o<=b&&x.svc&&!['canc','noshow'].includes(x.st)),p=L.filter(x=>x.paid).reduce((s,x)=>s+sv(x.svc).p,0),n=L.filter(x=>x.st=='new').length;return `<div class="mini"><span>Оплачено: <b>${p} ₴</b></span><span>${n} чекають підтвердження</span></div><div class="seg vw">${[['day','День'],['week','Тиждень'],['month','Місяць']].map(v=>`<button class="${S.view==v[0]?'on':''}" onclick="S.view='${v[0]}';render()">${v[1]}</button>`).join('')}</div><div class="row2" style="margin:4px 2px 2px">${greet()}<button class="offb" onclick="offs()">Вихідні</button></div>`}
+function calHead(){const[a,b]=rng(),L=S.appts.filter(x=>x.o>=a&&x.o<=b&&x.svc&&!['canc','noshow'].includes(x.st)),p=L.filter(x=>x.paid).reduce((s,x)=>s+sv(x.svc).p,0),n=pend();return `<div class="mini"><span>Оплачено: <b>${p} ₴</b></span>${n?`<button class="pd" onclick="S.tab='rq';render();scrollTo(0,0)">${n} ${pl(n,'чекає','чекають','чекають')} підтвердження ›</button>`:'<span class="pd0">✓ Усе підтверджено</span>'}</div><div class="seg vw">${[['day','День'],['week','Тиждень'],['month','Місяць']].map(v=>`<button class="${S.view==v[0]?'on':''}" onclick="S.view='${v[0]}';render()">${v[1]}</button>`).join('')}</div><div class="row2" style="margin:4px 2px 2px">${greet()}<button class="offb" onclick="offs()">Вихідні</button></div>`}
 function mv(k){const d=D(S.day),t=new Date(d.getFullYear(),d.getMonth()+k,Math.min(d.getDate(),28));S.day=Math.round((t-D(0))/864e5);render()}
 function cnav(){const w=S.view=='week',d=D(S.day),t=w?fd(rng()[0])+' – '+fd(rng()[1]):MNN[d.getMonth()]+' '+d.getFullYear();return `<div class="row2"><button class="back" aria-label="Назад" onclick="${w?'S.day-=7;render()':'mv(-1)'}">‹</button><h2 style="margin:0">${t}</h2><button class="back" aria-label="Далі" onclick="${w?'S.day+=7;render()':'mv(1)'}">›</button></div>`}
 function weekV(){const a=rng()[0];let h=cnav();for(let i=0;i<7;i++){const o=a+i,l=S.appts.filter(x=>x.o==o&&x.st!='canc').sort((x,y)=>t2m(x.time)-t2m(y.time));h+=`<button class="card ap" onclick="S.day=${o};S.view='day';render()"><div class="t">${WD[D(o).getDay()]}<small>${D(o).getDate()}</small>${nOf(o)?`<em class="nb2">+${nOf(o)}</em>`:''}</div><div class="b">${isOff(o)?'<span class="mu sm">Вихідний</span>':l.map(x=>`<div class="sm"><span><b>${x.time}</b> ${esc(x.name)}</span><span class="chip ${x.st}">${ST[x.st]}</span></div>`).join('')||'<span class="mu sm">Вільно</span>'}</div></button>`}return h}
@@ -275,7 +296,7 @@ function cal(){return `<div class="${S.fx?'fx':''}">`+calHead()+(S.view=='week'?
 function isNew(a){return !!(a.client&&a.cat>=T0()&&a.st=='new'&&!a.seen)}
 function nOf(o){return S.appts.filter(a=>a.o==o&&isNew(a)).length}
 function newAll(){return S.appts.filter(isNew).sort((a,b)=>b.cat-a.cat)}
-function greet(){const n=newAll().length;return n?`<span class="gr">Добрий день, Анно. <button class="lk" onclick="newList()">Подивитись нові записи <span aria-hidden="true">›</span></button></span>`:`<span class="mu">Добрий день, Анно</span>`}
+function greet(){const n=newAll().length;return `<span class="gr">Добрий день, Анно.<br>${n?`<button class="lk" onclick="newList()" aria-label="Подивитись нові записи: ${n}">Нові записи<span class="n">${n}</span><span aria-hidden="true">›</span></button>`:'<span class="lk0"><span aria-hidden="true">✓</span> Нових записів немає</span>'}</span>`}
 function newList(){const l=newAll();if(!l.length){render();return}sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Нові записи</h2><p class="mu sm" style="margin:0">${l.length} ${pl(l.length,'запис надійшов','записи надійшли','записів надійшло')} сьогодні</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div><div class="row2" style="margin:12px 0 4px"><span class="sm mu">Натисніть запис, щоб відкрити деталі</span><button class="gocal" onclick="goCal()">У календар <span aria-hidden="true">→</span></button></div>${l.map(a=>{const v=sv(a.svc);return `<button class="card ap" style="margin:8px 0" onclick="open_(${a.id})"><div class="b"><div><b>${esc(a.name)}</b><span class="chip ${a.st}">${ST[a.st]}</span></div><div class="sm mu">${esc(a.phone)}</div><div class="sm" style="margin-top:4px"><b>${dl(a.o,a.time)}</b> · ${esc(v.n)}</div>${a.cm?`<div class="cq sm">💬 ${esc(a.cm)}</div>`:''}<div class="sm mu" style="margin-top:4px">Надійшов: ${cr((Date.now()-a.cat)/6e4)}</div></div></button>`}).join('')}`)}
 function goCal(){const l=newAll().map(a=>a.o).sort((a,b)=>a-b);closeS();S.tab='cal';S.view='month';S.day=l.find(o=>o>=0)??l[0]??S.day;S.fx=1;render();scrollTo({top:0,behavior:'smooth'});setTimeout(()=>{S.fx=0},WH1)}
 
