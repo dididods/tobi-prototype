@@ -110,6 +110,10 @@ input.bad,select.bad,textarea.bad{border-color:var(--bad);background:#fff5f6}
 #sp .t1{color:transparent;background:linear-gradient(105deg,#fff0 42%,#ffffffe6 50%,#fff0 58%) 150% 0/250% 100% no-repeat,linear-gradient(120deg,#2b1b6b,#a2408f 42%,#ff6fa5 62%,#7d5be0);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 20px #f2528a40);animation:spsh 2.2s ease-in-out 1.2s forwards}
 @keyframes spsh{to{background-position:-60% 0,0 0}}
 @media(prefers-reduced-motion:reduce){#sp .tb{opacity:1;filter:none;transform:none;letter-spacing:-.01em;animation:none}#sp .t1{animation:none}}
+/* Етап 5: список клієнток */
+.seg.cso{margin-top:10px}
+.seg.cso button{padding:8px 4px;font-size:13px}
+.cdel{display:block;width:100%;min-height:44px;margin-top:8px;color:var(--bad);font-weight:700;font-size:14px}
 /* Етап 4: картка клієнтки */
 .ap .b{min-width:0}
 .ap .b .cr1{justify-content:flex-start}
@@ -493,25 +497,31 @@ S.appts.push({id:S.id++,o,time:t,svc:s||null,dur:30,name:s?cName($("#qp").value,
 /* Дані клієнтки живуть у S.cl за ключем pk(телефон): порядок появи n, дата at, колір c, коротка замітка sn,
    коментарі cms та ім'я name (заповнюється, лише коли майстриня змінила його в картці). */
 const CC=[['#f2528a','Рожевий'],['#9b86ec','Бузковий'],['#2b1b6b','Індиго'],['#d18a14','Бурштиновий'],['#2fa37f','М’ятний']];
-S.cl={};S.cln=1;S.cmid=1;
-function syncCl(){S.appts.forEach(a=>{const k=a.svc&&pk(a.phone);if(k&&!S.cl[k])S.cl[k]={n:S.cln++,at:a.cat||Date.now(),c:0,sn:'',cms:[],name:''}})}
+S.cl={};S.cln=1;S.cmid=1;S.cs='new';
+/* S.clx: видалені клієнтки, ключ pk(телефон), значення — S.id на момент видалення.
+   Клієнтка повертається, коли з'являється новий запис (id не менший за позначку) або старий знову стає активним. */
+S.clx={};
+const clAct=a=>['new','conf'].includes(a.st);
+function syncCl(){S.appts.forEach(a=>{const k=a.svc&&pk(a.phone);if(!k)return;if(k in S.clx){if(a.id<S.clx[k]&&!clAct(a))return;delete S.clx[k]}if(!S.cl[k])S.cl[k]={n:S.cln++,at:a.cat||Date.now(),c:0,sn:'',cms:[],name:''}})}
 /* Ім'я з картки має перевагу над тим, що клієнтка ввела сама */
 function cName(ph,typed){const c=S.cl[pk(ph)];return c&&c.name||typed}
 function clRn(k,n){if(S.cl[k])S.cl[k].name=n;[S.appts,S.reqs,S.wait].forEach(l=>l.forEach(x=>{if(pk(x.phone)==k)x.name=n}))}
 /* Клієнтки групуються за ключем pk(): «+380 67 111 22 33» і «0671112233» — одна клієнтка. Ім'я й телефон беруться з найсвіжішого запису. */
-function cliMap(){syncCl();const m={};S.appts.filter(a=>a.svc&&pk(a.phone)).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time)).forEach(a=>{const k=pk(a.phone),c=m[k]=m[k]||{k,v:[],cl:S.cl[k]};c.name=c.cl.name||a.name;c.phone=a.phone;c.v.push(a)});return m}
+function cliMap(){syncCl();const m={};S.appts.filter(a=>a.svc&&pk(a.phone)&&!(pk(a.phone) in S.clx)).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time)).forEach(a=>{const k=pk(a.phone),c=m[k]=m[k]||{k,v:[],cl:S.cl[k]};c.name=c.cl.name||a.name;c.phone=a.phone;c.v.push(a)});return m}
+function clSort(l){const az=(a,b)=>a.name.localeCompare(b.name,'uk'),vis=c=>c.v.filter(a=>a.st=='done').length;return l.slice().sort(S.cs=='az'?az:S.cs=='vis'?(a,b)=>vis(b)-vis(a)||az(a,b):(a,b)=>b.cl.n-a.cl.n)}
 function clients(){const all=Object.values(cliMap()),q=S.q.toLowerCase().trim(),qd=q.replace(/\D/g,''),l=all.filter(c=>c.name.toLowerCase().includes(q)||c.cl.sn.toLowerCase().includes(q)||(qd&&(c.phone.replace(/\D/g,'').includes(qd)||c.k.includes(qd))));
 return `<h1>Клієнтки</h1><input id="q" placeholder="Пошук за ім’ям, телефоном або заміткою" value="${esc(S.q)}" oninput="S.q=this.value;const p=this.selectionStart;render();const e=$('#q');e.focus();e.setSelectionRange(p,p)">
-${l.map(c=>{const n=c.v.filter(a=>a.st=="done").length,sn=c.cl.sn.trim();return `<button class="card ap" onclick="cli('${c.k}')"><div class="b" style="border-left-color:${CC[c.cl.c][0]}"><div class="cr1"><b>${esc(c.name)}</b>${sn?`<span class="sn">${esc(sn)}</span>`:''}</div><div class="sm mu"><span>${esc(c.phone)}</span><span class="nw">${n} ${pl(n,'візит','візити','візитів')}</span></div></div></button>`}).join("")||`<div class="brk" style="margin-top:12px">${all.length?'Нікого не знайдено. Спробуйте частину номера.':'Клієнток поки немає. Вони з’являться після першого запису.'}</div>`}`}
+${all.length?`<div class="seg cso" role="group" aria-label="Сортування клієнток">${[['new','Нові'],['az','А–Я'],['vis','Візити']].map(x=>`<button class="${S.cs==x[0]?'on':''}" aria-pressed="${S.cs==x[0]}" onclick="S.cs='${x[0]}';render()">${x[1]}</button>`).join('')}</div>`:''}
+${clSort(l).map(c=>{const n=c.v.filter(a=>a.st=="done").length,sn=c.cl.sn.trim();return `<button class="card ap" onclick="cli('${c.k}')"><div class="b" style="border-left-color:${CC[c.cl.c][0]}"><div class="cr1"><b>${esc(c.name)}</b>${sn?`<span class="sn">${esc(sn)}</span>`:''}</div><div class="sm mu"><span>${esc(c.phone)}</span><span class="nw">${n} ${pl(n,'візит','візити','візитів')}</span></div></div></button>`}).join("")||`<div class="brk" style="margin-top:12px">${all.length?'Нікого не знайдено. Спробуйте частину номера.':'Клієнток поки немає. Вони з’являться після першого запису.'}</div>`}`}
 function cli(k,still){const c=cliMap()[k];if(!c)return;const old=$('#ov .sh'),sc=still&&old?old.scrollTop:0,v=c.v.slice().sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time)),n=c.cl.cms.length,sn=c.cl.sn;
 sheet(`<div class="row2"><span class="sm mu">Картка клієнтки</span><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div>
 <div class="cld"><div class="clm" style="border-left-color:${CC[c.cl.c][0]}"><div class="cln"><h2>${esc(c.name)}</h2><button class="ib" aria-label="Змінити ім’я та колір" onclick="clEd('${k}')">${IC.ed}</button></div><p class="mu sm">${esc(c.phone)}</p></div>
 <div class="cls"><textarea id="csn" rows="3" maxlength="40" aria-label="Коротка замітка, до 40 символів" placeholder="Коротко: що важливо пам’ятати" oninput="snIn('${k}',this)" onblur="snOut('${k}',this)" onkeydown="if(event.key=='Enter'){event.preventDefault();this.blur()}">${esc(sn)}</textarea><small><span>Коротка замітка</span><span id="csc">${sn.length}/40</span></small></div></div>
 <button class="btn g" onclick="cmOpen('${k}')">${n?'Відкрити коментарі · '+n:'Додати коментар'}</button>
-<label class="f">Історія візитів</label>${v.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+" дн. тому":wd(a.o)+", "+fd(a.o)} · ${a.time}</span>${a.note?`<br><span class="sm">📝 ${esc(a.note)}</span>`:''}</span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join("")}<button class="btn" onclick="cliNew('${k}')">Створити запис</button>`);
+<label class="f">Історія візитів</label>${v.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+" дн. тому":wd(a.o)+", "+fd(a.o)} · ${a.time}</span>${a.note?`<br><span class="sm">📝 ${esc(a.note)}</span>`:''}</span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join("")}<button class="btn" onclick="cliNew('${k}')">Створити запис</button><button class="cdel" onclick="clDel('${k}')">Видалити клієнтку</button>`);
 if(still){const x=$('#ov .sh');x.scrollTop=sc;x.style.animation='none'}}
-function snIn(k,el){const v=el.value.replace(/\s*\n\s*/g,' ').slice(0,40);if(v!=el.value)el.value=v;S.cl[k].sn=v;$('#csc').textContent=v.length+'/40';render()}
-function snOut(k,el){const v=el.value.trim();el.value=v;S.cl[k].sn=v;const c=$('#csc');if(c)c.textContent=v.length+'/40';render()}
+function snIn(k,el){if(!S.cl[k])return;const v=el.value.replace(/\s*\n\s*/g,' ').slice(0,40);if(v!=el.value)el.value=v;S.cl[k].sn=v;$('#csc').textContent=v.length+'/40';render()}
+function snOut(k,el){if(!S.cl[k])return;const v=el.value.trim();el.value=v;S.cl[k].sn=v;const c=$('#csc');if(c)c.textContent=v.length+'/40';render()}
 function cliNew(k){const c=cliMap()[k];closeS();S.tab='cal';render();quick();if(c){$('#qn').value=c.name;$('#qp').value=c.phone}}
 /* Зміна імені та кольору — вікно поверх картки */
 function clEd(k){const c=cliMap()[k];if(!c)return;S.cc=c.cl.c;sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Редагувати клієнтку</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div>
@@ -533,6 +543,20 @@ function cmAdd(k){const x=S.cd.trim();if(!x){S.cdE=1;cmS(k,1);$('#cmn').focus();
 function cmSv(k,id){const x=$('#cme').value.trim();if(!x){toast('Коментар не може бути порожнім');return}const m=S.cl[k].cms.find(y=>y.id==id);if(m){m.x=x;m.ed=Date.now()}S.ce=0;cmS(k,1);toast('Коментар змінено')}
 function cmDl(k,id){const m=S.cl[k].cms.find(y=>y.id==id);if(!m)return;sheet2(`<h2 style="margin-top:0">Видалити коментар?</h2><div class="cq sm cmt">${esc(m.x)}</div><p class="sm">Відновити його після видалення не вийде.</p><button class="btn" style="background:var(--bad);box-shadow:none" onclick="cmDlY('${k}',${id})">Так, видалити</button><button class="btn g" onclick="cmS('${k}',1)">Назад</button>`,1)}
 function cmDlY(k,id){S.cl[k].cms=S.cl[k].cms.filter(y=>y.id!=id);S.ce=0;cmS(k,1);cli(k,1);toast('Коментар видалено')}
+/* Видалення клієнтки: минулі записи лишаються в календарі, активні записи й запити спершу треба вирішити */
+function clDel(k){const c=cliMap()[k];if(!c)return;const A=c.v.filter(clAct),R=S.reqs.filter(r=>r.st=='pending'&&pk(r.phone)==k);
+if(A.length||R.length){sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Поки не можна видалити</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div><p class="sm">У клієнтки ${esc(c.name)} є незавершені справи. Скасуйте запис або дочекайтеся його завершення, а запит підтвердьте чи відхиліть.</p>
+${A.map(a=>`<button class="card ap" style="margin:8px 0" onclick="closeS();open_(${a.id})"><div class="b"><div><b>${esc(sv(a.svc).n)}</b><span class="chip ${a.st}">${ST[a.st]}</span></div><div class="sm mu">${dl(a.o,a.time)}</div></div></button>`).join('')}
+${R.map(r=>`<button class="card ap" style="margin:8px 0" onclick="clRq('${r.type=='move'?'move':'new'}')"><div class="b"><div><b>${r.type=='move'?'Запит на перенесення':'Запит на новий запис'}</b></div><div class="sm mu">${dl(r.o,r.t)}</div></div></button>`).join('')}
+<button class="btn g" onclick="closeS2()">Зрозуміло</button>`);return}
+const n=c.cl.cms.length,w=S.wait.filter(x=>pk(x.phone)==k).length;
+sheet2(`<h2 style="margin-top:0">Видалити клієнтку?</h2><div class="cq sm">${esc(c.name)} · ${esc(c.phone)}</div>
+<p class="sm"><b>Зникне назавжди:</b> картка${n?`, коментарі (${n})`:''}${c.cl.sn?', коротка замітка':''}, колір смужки${w?`, заявки у списку очікування (${w})`:''}.</p>
+<p class="sm"><b>Залишиться:</b> минулі записи в календарі та історія у «Запитах».</p>
+<p class="sm mu">Якщо клієнтка запишеться знову, її минулі візити повернуться в нову картку.</p>
+<button class="btn" style="background:var(--bad);box-shadow:none" onclick="clDelY('${k}')">Так, видалити</button><button class="btn g" onclick="closeS2()">Назад</button>`)}
+function clDelY(k){delete S.cl[k];S.clx[k]=S.id;S.wait=S.wait.filter(x=>pk(x.phone)!=k);closeS();render();toast('Клієнтку видалено')}
+function clRq(t){closeS();S.tab='rq';S.rqt=t;render();scrollTo(0,0)}
 function nextAp(){const n=Date.now();return S.appts.filter(a=>a.svc&&["new","conf"].includes(a.st)&&st0(a)>n).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time))[0]}
 function rem(){const a=nextAp();return `<h1>Нагадування</h1><p class="mu sm">Так клієнтка бачить повідомлення в Telegram. Натисніть кнопку — календар оновиться.</p>
 ${a?`<div class="tg"><div class="sm" style="margin-bottom:6px">Нагадування для: <b>${esc(a.name)}</b></div><div class="m">За годинку вже творимо красу 💅 Чекаю на тебе о ${a.time}! Підтверджуєш, що все в силі?</div><div class="k"><button onclick="reply(${a.id},'conf')">Підтверджую</button><button onclick="reply(${a.id},'canc')">Не зможу прийти</button></div></div>
