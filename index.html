@@ -110,6 +110,25 @@ input.bad,select.bad,textarea.bad{border-color:var(--bad);background:#fff5f6}
 #sp .t1{color:transparent;background:linear-gradient(105deg,#fff0 42%,#ffffffe6 50%,#fff0 58%) 150% 0/250% 100% no-repeat,linear-gradient(120deg,#2b1b6b,#a2408f 42%,#ff6fa5 62%,#7d5be0);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 20px #f2528a40);animation:spsh 2.2s ease-in-out 1.2s forwards}
 @keyframes spsh{to{background-position:-60% 0,0 0}}
 @media(prefers-reduced-motion:reduce){#sp .tb{opacity:1;filter:none;transform:none;letter-spacing:-.01em;animation:none}#sp .t1{animation:none}}
+/* Етап 4: картка клієнтки */
+.ap .b{min-width:0}
+.ap .b .cr1{justify-content:flex-start}
+.cr1 b{flex:0 1 auto;min-width:0;max-width:68%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr1 .sn{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:600;color:var(--pu)}
+.nw{white-space:nowrap;flex:none}
+.cld{display:grid;grid-template-columns:minmax(0,1fr) 47%;gap:12px;margin:6px 0 4px}
+.clm{border-left:3px solid var(--ac);padding-left:10px;min-width:0}
+.clm p{margin:4px 0 0;overflow-wrap:anywhere}
+.cln{display:flex;align-items:flex-start;gap:6px}
+.cln h2{margin:0;min-width:0;flex:1;overflow-wrap:anywhere}
+.cls{min-width:0}
+.cls textarea{display:block;min-height:68px;resize:none;padding:8px 10px;border-radius:14px;font-size:14px;line-height:1.3}
+.cls small{display:flex;justify-content:space-between;gap:6px;margin-top:3px;color:var(--mu);font-size:11px}
+.ccr{display:flex;justify-content:space-between;gap:6px}
+.ccb{width:44px;height:44px;border-radius:50%;color:#fff;font-weight:800;display:grid;place-items:center;flex:none}
+.ccb.on{box-shadow:0 0 0 2px #fbf9fe,0 0 0 4px var(--in)}
+.cmi{margin:10px 0}
+.cmt{white-space:pre-wrap;overflow-wrap:anywhere}
 /* Етап 3: історія рішень у «Запитах» */
 .seg.rqs button{padding:9px 3px;font-size:13px;white-space:nowrap}
 button.pr{width:100%;text-align:left}
@@ -122,7 +141,7 @@ button.pr{width:100%;text-align:left}
 .seg button .k{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--ac2);color:var(--acd);font-size:11px;font-weight:800}
 .seg button.on .k{background:var(--ac);color:#fff}
 </style></head><body>
-<div id="app"></div><div id="ov"></div><div id="ts"></div>
+<div id="app"></div><div id="ov"></div><div id="ov2"></div><div id="ts"></div>
 <div id="sp" aria-hidden="true"><div class="tb"><span class="t1">Тобі</span></div><canvas id="spc"></canvas></div>
 <script>
 const SV=[{id:1,n:"Манікюр + покриття гель-лаком",d:120,p:850},{id:2,n:"Класичний манікюр",d:75,p:500},{id:3,n:"Зняття + манікюр + покриття",d:150,p:950},{id:4,n:"Дизайн (1–2 нігті)",d:30,p:150}];
@@ -155,10 +174,13 @@ function busy(o,ign){const r=[];S.appts.filter(a=>a.o==o&&a.st!="canc"&&a.st!="n
 function slots(o,dur,ign){if(isOff(o))return[];const b=busy(o,ign),r=[];for(let m=WH0;m+dur<=WH1;m+=30)r.push({t:m2t(m),f:!b.some(x=>m<x[1]&&m+dur>x[0])});return r}
 function toast(m){$("#ts").innerHTML=`<div class="toast" role="status">${m}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>$("#ts").innerHTML="",2600)}
 function sheet(h){$("#ov").innerHTML=`<div class="ov" onclick="if(event.target==this)closeS()"><div class="sh" role="dialog" aria-modal="true">${h.includes('class="xb"')?'':'<button class="xb sx" aria-label="Закрити" onclick="closeS()">✕</button>'}${h}</div></div>`}
-function closeS(){$("#ov").innerHTML=""}
+function closeS(){$("#ov").innerHTML="";closeS2()}
+/* Другий шар: вікно поверх відкритої картки; після закриття картка лишається на місці */
+function sheet2(h,still){const old=$('#ov2 .sh'),sc=still&&old?old.scrollTop:0;$("#ov2").innerHTML=`<div class="ov" onclick="if(event.target==this)closeS2()"><div class="sh" role="dialog" aria-modal="true">${h}</div></div>`;if(still){const x=$('#ov2 .sh');x.scrollTop=sc;x.style.animation='none'}}
+function closeS2(){$("#ov2").innerHTML=""}
 function topbar(){return `<div class="top"><span class="bm" aria-hidden="true">Т</span>${TEST?`<div class="seg" title="Тестовий перемикач"><button class="${S.mode=="client"?"on":""}" onclick="mode('client')">Клієнтка</button><button class="${S.mode=="master"?"on":""}" onclick="mode('master')">Кабінет майстра</button></div>`:`<span class="logo">Тобі</span>`}<button class="prof ${S.mode=="master"?"on":""}" aria-label="Кабінет майстра" onclick="mode(S.mode=='master'?'client':'master')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div>`}
 function mode(m){S.mode=m;render();scrollTo(0,0)}
-function render(){autoDone();$("#app").innerHTML=topbar()+(S.mode=="client"?client():master());
+function render(){autoDone();syncCl();$("#app").innerHTML=topbar()+(S.mode=="client"?client():master());
 $("#app").insertAdjacentHTML("beforeend",S.mode=="master"?`<nav class="nav"><div>${[["cal","Календар",'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>'],["cl","Клієнтки",'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0m2-13a4 4 0 0 1 0 8m1 2a6 6 0 0 1 3 5"/>'],"+",["rq","Запити",'<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>'],["st","Налаштування",'<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>']].map(x=>x=="+"?`<button class="fab" aria-label="Новий запис" onclick="quick()">＋</button>`:`<button class="${S.tab==x[0]?"on":""}" onclick="S.tab='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}${x[0]=="rq"&&pend()?`<i class="bdg">${pend()}</i>`:""}</button>`).join("")}</div></nav>`:clientNav())}
 /* ---------- CLIENT ---------- */
 function client(){if(S.ct=='prof')return profV();const s=S.sel,st=S.step;
@@ -197,7 +219,7 @@ function book(){sv2();const s=S.sel,e={};if(!s.name.trim())e.n='Вкажіть �
 if(Object.keys(e).length){S.be=e;render();setTimeout(()=>{const x=document.querySelector('.er');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})},50);return}S.be={};
 if(!cslots(s.day,sv(s.svc).d).some(x=>x.t==s.time&&x.f)){toast('Цей час уже зайнятий. Оберіть інший');S.step=2;render();return}
 if(!S.prof&&$("#rm")&&$("#rm").checked)S.prof={name:s.name.trim(),phone:s.phone,email:""};
-const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};S.appts.push(a);S.last=a;S.step=4;render();scrollTo(0,0)}
+const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};S.appts.push({...a,name:cName(s.phone,a.name)});S.last=a;S.step=4;render();scrollTo(0,0)}
 
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()},TT=(a,b)=>{const r=[];for(let m=a;m<=b;m+=30)r.push(m2t(m));return r};
 function cslots(o,d){return slots(o,d).map(x=>({t:x.t,f:x.f&&!(o==0&&t2m(x.t)<=nowMin())}))}
@@ -236,7 +258,7 @@ if(!f.name.trim())e.name='Вкажіть ім’я';if(f.phone.replace(/\D/g,'')
 if(Object.keys(e).length){S.we=e;wRender(1);setTimeout(()=>{const x=document.querySelector('.sh .er');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})},60);return}
 const dp=S.wait.some(w=>pk(w.phone)==pk(f.phone)&&w.o==f.o&&w.svc==+f.svc&&w.mode==f.mode&&w.t1==(f.mode=='any'?'':f.t1)&&w.t2==(f.mode=='between'?f.t2:''));
 if(dp){toast('Така заявка вже є у списку очікування');return}
-S.wait.push({id:S.id++,name:f.name.trim(),phone:f.phone.trim(),svc:+f.svc,o:f.o,mode:f.mode,t1:f.mode=='any'?'':f.t1,t2:f.mode=='between'?f.t2:''});S.wf=null;S.we={};closeS();toast('Заявку додано до списку очікування')}
+S.wait.push({id:S.id++,name:cName(f.phone,f.name.trim()),phone:f.phone.trim(),svc:+f.svc,o:f.o,mode:f.mode,t1:f.mode=='any'?'':f.t1,t2:f.mode=='between'?f.t2:''});S.wf=null;S.we={};closeS();toast('Заявку додано до списку очікування')}
 
 /* ---------- MASTER ---------- */
 function master(){return S.tab=="cal"?cal():S.tab=="cl"?clients():S.tab=="rq"?reqs():S.tab=="st"?stg():cal()}
@@ -304,7 +326,7 @@ if(!yes){r.st='rej';r.ref=1;r.dt=Date.now();closeS();render();toast('Відмо�
 const c=rqOk({...r,o:r.po,t:r.pt});if(c!='ok'){toast(c=='gone'?'Початковий запис уже недоступний':'Цей час уже недоступний');rqView(id);return}
 r.o=r.po;r.t=r.pt;rqApply(r);closeS();render();toast('Запис підтверджено на '+dl(r.o,r.t))}
 /* Застосувати підтверджену заявку: перенести запис або створити новий і запам'ятати, який саме (r.rid) */
-function rqApply(r){if(r.type=='move'){const a=S.appts.find(x=>x.id==r.aid);a.o=r.o;a.time=r.t;a.st='conf';a.seen=true;r.rid=a.id}else{const id=S.id++;S.appts.push({id,o:r.o,time:r.t,svc:r.svc,name:r.name,phone:r.phone,st:'conf',paid:false,note:'',cm:r.cm});r.rid=id}r.st='done';r.dt=Date.now()}
+function rqApply(r){if(r.type=='move'){const a=S.appts.find(x=>x.id==r.aid);a.o=r.o;a.time=r.t;a.st='conf';a.seen=true;r.rid=a.id}else{const id=S.id++;S.appts.push({id,o:r.o,time:r.t,svc:r.svc,name:cName(r.phone,r.name),phone:r.phone,st:'conf',paid:false,note:'',cm:r.cm});r.rid=id}r.st='done';r.dt=Date.now()}
 let LK=false;
 function rqAct(id,ok){if(LK)return;LK=true;try{const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;
 if(ok){const c=rqOk(r);if(c!='ok'){toast(c=='gone'?'Початковий запис уже недоступний':c=='past'?'Бажаний час уже минув':'Цей час уже зайнятий. Відхиліть запит або узгодьте інший час');render();return}
@@ -369,7 +391,7 @@ ${lk?`<div class="card sm" style="margin-top:12px">Дата візиту: <b>${d
 <label class="f">Коментар клієнтки</label><textarea id="ec">${esc(a.cm||'')}</textarea>
 <div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="open_(${id})">Скасувати</button><button class="btn" style="margin:0" onclick="eSave(${id})">Зберегти</button></div>`);if(!lk)tFill('e',sv(a.svc).d,id,0,a.o,a.time)}
 function eChg(id,only){tFill('e',sv(+$('#es').value).d,id,only,+$('#eo').value,$('#et').value)}
-function eSave(id){const a=S.appts.find(x=>x.id==id),lk=edLk(a),n=$('#en').value.trim(),sid=+$('#es').value,o=lk?a.o:+$('#eo').value,t=lk?a.time:$('#et').value;if(!n||!t){toast('Вкажіть ім’я й вільний час');return}const d=sv(sid).d,m=t2m(t);if(!lk&&(isOff(o)||m<WH0||m+d>WH1||busy(o,id).some(b=>m<b[1]&&m+d>b[0]))){toast('Цей час недоступний');return}Object.assign(a,{seen:true,name:n,phone:$('#ep').value.trim(),svc:sid,o,time:t,cm:$('#ec').value.trim()});S.day=o;closeS();render();toast('Запис оновлено')}
+function eSave(id){const a=S.appts.find(x=>x.id==id),lk=edLk(a),n=$('#en').value.trim(),sid=+$('#es').value,o=lk?a.o:+$('#eo').value,t=lk?a.time:$('#et').value;if(!n||!t){toast('Вкажіть ім’я й вільний час');return}const d=sv(sid).d,m=t2m(t);if(!lk&&(isOff(o)||m<WH0||m+d>WH1||busy(o,id).some(b=>m<b[1]&&m+d>b[0]))){toast('Цей час недоступний');return}const ph=$('#ep').value.trim();if(ph.replace(/\D/g,'').length<10){toast('Вкажіть номер телефону повністю (мінімум 10 цифр)');return}let nm=n;if(pk(ph)==pk(a.phone)){if(n!=a.name)clRn(pk(ph),n)}else nm=cName(ph,n);Object.assign(a,{seen:true,name:nm,phone:ph,svc:sid,o,time:t,cm:$('#ec').value.trim()});S.day=o;closeS();render();toast('Запис оновлено')}
 function offerT(id){const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Інший час</h2><p class="mu sm" style="margin:0">${esc(r.name)} · ${esc(sv(r.svc).n)}</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div><p class="sm mu" style="margin:8px 0 0">Бажаний час клієнтки: ${dl(r.o,r.t)}</p><div class="g2 dt"><div><label class="f">Дата</label><select id="fo" onchange="tFill('f',sv(${r.svc}).d,${r.aid||-1},1)"></select></div><div><label class="f">Година</label><select id="ft"></select></div></div><label class="f">Повідомлення клієнтці (за бажанням)</label><textarea id="fm" placeholder="Наприклад, цей час зайнятий, чи підійде інший?"></textarea><div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="closeS()">Скасувати</button><button class="btn" style="margin:0" onclick="offerSend(${id})">Надіслати</button></div>`);tFill('f',sv(r.svc).d,r.aid||-1,0,r.o,r.t)}
 function offerSend(id){const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;const o=+$('#fo').value,t=$('#ft').value;if(!t){toast('Оберіть вільний час');return}r.st='offer';r.po=o;r.pt=t;r.pm=$('#fm').value.trim();r.dt=Date.now();closeS();render();toast('Пропозицію надіслано клієнтці (демо)')}
 function clientNav(){return `<nav class="nav"><div>${[['book','Записатись','<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18M12 13v4m-2-2h4"/>'],['prof','Профіль','<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>']].map(x=>`<button class="${S.ct==x[0]?'on':''}" onclick="S.ct='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}</button>`).join('')}</div></nav>`}
@@ -384,7 +406,7 @@ function profDel(){S.prof=null;render();toast('Дані видалено')}
 function profDemo(){S.prof={name:'Олена Коваль',phone:'+380 67 111 22 33',email:''};render()}
 /* Дати зберігаються як зсув від «сьогодні». Опівночі «сьогодні» змінюється, тому всі зсуви
    треба зменшити на кількість днів, що минули, інакше записи «поїдуть» на день уперед. */
-function shiftDays(n){if(!n)return;S.appts.forEach(a=>a.o-=n);S.reqs.forEach(r=>{r.o-=n;if(r.po!=null)r.po-=n});S.wait.forEach(w=>w.o-=n);S.offs.forEach(x=>{if(x.t=='d'){x.a-=n;x.b-=n}});
+function shiftDays(n){if(!n)return;if(S.last)S.last.o-=n;S.appts.forEach(a=>a.o-=n);S.reqs.forEach(r=>{r.o-=n;if(r.po!=null)r.po-=n});S.wait.forEach(w=>w.o-=n);S.offs.forEach(x=>{if(x.t=='d'){x.a-=n;x.b-=n}});
 S.day-=n;S.sel.day-=n;if(S.sel.day<0){S.sel.day=0;S.sel.time=null}if(S.wf&&S.wf.o!=null)S.wf.o-=n;S.cm={b:0,w:0}}
 setInterval(()=>{if(autoDone())render()},60000);/* автозавершення щохвилини */
 S.t0=T0();setInterval(()=>{const t=T0();if(t!==S.t0){const n=Math.round((t-S.t0)/864e5);S.t0=t;shiftDays(n);closeS();render()}},30000);
@@ -454,25 +476,63 @@ sheet(`<h2>Звільнилось вікно ${a.time}</h2><p class="mu sm">${wd
 <button class="btn" onclick="sendOffer()">Запропонувати вибраним</button><button class="btn g" onclick="closeS()">Не пропонувати</button>`)}
 function sendOffer(){const n=[...document.querySelectorAll(".wc")].filter(x=>x.checked).length;closeS();toast(n?`Пропозицію надіслано: ${n} (демо)`:"Нікого не вибрано")}
 function quick(){sheet(`<h2>Новий запис</h2>
-<div class="g2 np"><div><label class="f">Ім’я</label><input id="qn" placeholder="Ім’я клієнтки" autofocus></div><div><label class="f">Телефон</label><input id="qp" type="tel" placeholder="+380" autocomplete="off"></div></div>
+<div class="g2 np" id="qnp"><div><label class="f">Ім’я <span class="rq">*</span></label><input id="qn" placeholder="Ім’я клієнтки" autofocus oninput="clrE(this,'q')"></div><div><label class="f">Телефон <span class="rq">*</span></label><input id="qp" type="tel" placeholder="+380" autocomplete="off" oninput="clrE(this,'q')"></div></div>
 <label class="f">Послуга (можна пізніше)</label><select id="qs" onchange="qFill()">${SV.map(s=>`<option value="${s.id}">${esc(s.n)}</option>`).join("")}<option value="0">Заблокувати час (30 хв)</option></select>
 <div class="g2 dt"><div><label class="f">Дата</label><select id="qd" onchange="qFill(1)"></select></div><div><label class="f">Година</label><select id="qt"></select></div></div>
 <p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p>
 <label class="f">Нотатки для себе</label><textarea id="qm" placeholder="Наприклад, дизайн або побажання"></textarea>
 <button class="btn" onclick="addQ()">Додати</button>`);qFill(0,S.day)}
-function qFill(only,init){const sid=+$("#qs").value,d=sid?sv(sid).d:30,ds=$("#qd");
+function qFill(only,init){const sid=+$("#qs").value,d=sid?sv(sid).d:30,ds=$("#qd");$("#qnp").style.display=sid?"":"none";
 if(!only){const cur=init!=null?init:+ds.value;ds.innerHTML=[...Array(dHor()+1)].map((_,o)=>{const sl=slots(o,d),off=isOff(o),bad=off||!sl.some(x=>x.f);return `<option value="${o}" ${bad?'disabled style="color:#a9a3b8"':""}>${wd(o)}, ${fd(o)}${off?" · вихідний":bad?" · зайнято":""}</option>`}).join("");ds.value=cur;if(!ds.selectedOptions[0]||ds.selectedOptions[0].disabled){const f=[...ds.options].find(x=>!x.disabled);if(f)ds.value=f.value}}
 const sl=slots(+ds.value,d),ts=$("#qt"),cur=ts.value;ts.innerHTML=sl.map(x=>`<option value="${x.t}" ${x.f?"":'disabled style="color:#a9a3b8"'}>${x.t}${x.f?"":" · зайнято"}</option>`).join("");ts.value=cur;if(!ts.value||!ts.selectedOptions[0]||ts.selectedOptions[0].disabled){const f=sl.find(x=>x.f);if(f)ts.value=f.t}}
-function addQ(){const n=$("#qn").value.trim(),o=+$("#qd").value,t=$("#qt").value,s=+$("#qs").value;if(s&&!n){toast("Вкажіть ім’я");return}if(!t){toast("У цей день немає вільного часу");return}
+function qChk(n){let ok=true;[['#qn',!n&&'Вкажіть ім’я'],['#qp',$('#qp').value.replace(/\D/g,'').length<10&&'Вкажіть номер телефону повністю (мінімум 10 цифр)']].forEach(([id,m])=>{const el=$(id),x=el.nextElementSibling;if(x&&x.classList.contains('er'))x.remove();el.classList.toggle('bad',!!m);if(m){el.insertAdjacentHTML('afterend',`<div class="er">${m}</div>`);ok=false}});return ok}
+function addQ(){const n=$("#qn").value.trim(),o=+$("#qd").value,t=$("#qt").value,s=+$("#qs").value;if(s&&!qChk(n))return;if(!t){toast("У цей день немає вільного часу");return}
 const d=s?sv(s).d:30,m=t2m(t);if(busy(o).some(b=>m<b[1]&&m+d>b[0])||m<WH0||m+d>WH1){toast("Цей час недоступний");return}
-S.appts.push({id:S.id++,o,time:t,svc:s||null,dur:30,name:s?n:"Блок",phone:s?$("#qp").value.trim():"",st:s?"conf":"block",paid:false,note:s?$("#qm").value.trim():""});closeS();S.day=o;render();toast(s?"Запис додано":"Час заблоковано")}
+S.appts.push({id:S.id++,o,time:t,svc:s||null,dur:30,name:s?cName($("#qp").value,n):"Блок",phone:s?$("#qp").value.trim():"",st:s?"conf":"block",paid:false,note:s?$("#qm").value.trim():""});closeS();S.day=o;render();toast(s?"Запис додано":"Час заблоковано")}
+/* ---------- КЛІЄНТКИ ---------- */
+/* Дані клієнтки живуть у S.cl за ключем pk(телефон): порядок появи n, дата at, колір c, коротка замітка sn,
+   коментарі cms та ім'я name (заповнюється, лише коли майстриня змінила його в картці). */
+const CC=[['#f2528a','Рожевий'],['#9b86ec','Бузковий'],['#2b1b6b','Індиго'],['#d18a14','Бурштиновий'],['#2fa37f','М’ятний']];
+S.cl={};S.cln=1;S.cmid=1;
+function syncCl(){S.appts.forEach(a=>{const k=a.svc&&pk(a.phone);if(k&&!S.cl[k])S.cl[k]={n:S.cln++,at:a.cat||Date.now(),c:0,sn:'',cms:[],name:''}})}
+/* Ім'я з картки має перевагу над тим, що клієнтка ввела сама */
+function cName(ph,typed){const c=S.cl[pk(ph)];return c&&c.name||typed}
+function clRn(k,n){if(S.cl[k])S.cl[k].name=n;[S.appts,S.reqs,S.wait].forEach(l=>l.forEach(x=>{if(pk(x.phone)==k)x.name=n}))}
 /* Клієнтки групуються за ключем pk(): «+380 67 111 22 33» і «0671112233» — одна клієнтка. Ім'я й телефон беруться з найсвіжішого запису. */
-function cliMap(){const m={};S.appts.filter(a=>a.svc&&pk(a.phone)).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time)).forEach(a=>{const k=pk(a.phone),c=m[k]=m[k]||{k,v:[]};c.name=a.name;c.phone=a.phone;c.v.push(a)});return m}
-function clients(){const all=Object.values(cliMap()),q=S.q.toLowerCase().trim(),qd=q.replace(/\D/g,''),l=all.filter(c=>c.name.toLowerCase().includes(q)||(qd&&(c.phone.replace(/\D/g,'').includes(qd)||c.k.includes(qd))));
-return `<h1>Клієнтки</h1><input id="q" placeholder="Пошук за ім’ям або телефоном" value="${esc(S.q)}" oninput="S.q=this.value;const p=this.selectionStart;render();const e=$('#q');e.focus();e.setSelectionRange(p,p)">
-${l.map(c=>{const n=c.v.filter(a=>a.st=="done").length;return `<button class="card ap" onclick="cli('${c.k}')"><div class="b"><div><b>${esc(c.name)}</b><span class="sm mu">${n} ${pl(n,'візит','візити','візитів')}</span></div><div class="sm mu">${esc(c.phone)}</div></div></button>`}).join("")||`<div class="brk" style="margin-top:12px">${all.length?'Нікого не знайдено. Спробуйте частину номера.':'Клієнток поки немає. Вони з’являться після першого запису.'}</div>`}`}
-function cli(k){const c=cliMap()[k];if(!c)return;const v=c.v.slice().sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time)),nt=v.find(a=>a.note);sheet(`<h2>${esc(c.name)}</h2><p class="mu" style="margin:0">${esc(c.phone)}</p><label class="f">Історія візитів</label>${v.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+" дн. тому":wd(a.o)+", "+fd(a.o)} · ${a.time}</span></span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join("")}${nt?`<div class="card sm">📝 ${esc(nt.note)}</div>`:""}<button class="btn" onclick="cliNew('${k}')">Створити запис</button>`)}
+function cliMap(){syncCl();const m={};S.appts.filter(a=>a.svc&&pk(a.phone)).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time)).forEach(a=>{const k=pk(a.phone),c=m[k]=m[k]||{k,v:[],cl:S.cl[k]};c.name=c.cl.name||a.name;c.phone=a.phone;c.v.push(a)});return m}
+function clients(){const all=Object.values(cliMap()),q=S.q.toLowerCase().trim(),qd=q.replace(/\D/g,''),l=all.filter(c=>c.name.toLowerCase().includes(q)||c.cl.sn.toLowerCase().includes(q)||(qd&&(c.phone.replace(/\D/g,'').includes(qd)||c.k.includes(qd))));
+return `<h1>Клієнтки</h1><input id="q" placeholder="Пошук за ім’ям, телефоном або заміткою" value="${esc(S.q)}" oninput="S.q=this.value;const p=this.selectionStart;render();const e=$('#q');e.focus();e.setSelectionRange(p,p)">
+${l.map(c=>{const n=c.v.filter(a=>a.st=="done").length,sn=c.cl.sn.trim();return `<button class="card ap" onclick="cli('${c.k}')"><div class="b" style="border-left-color:${CC[c.cl.c][0]}"><div class="cr1"><b>${esc(c.name)}</b>${sn?`<span class="sn">${esc(sn)}</span>`:''}</div><div class="sm mu"><span>${esc(c.phone)}</span><span class="nw">${n} ${pl(n,'візит','візити','візитів')}</span></div></div></button>`}).join("")||`<div class="brk" style="margin-top:12px">${all.length?'Нікого не знайдено. Спробуйте частину номера.':'Клієнток поки немає. Вони з’являться після першого запису.'}</div>`}`}
+function cli(k,still){const c=cliMap()[k];if(!c)return;const old=$('#ov .sh'),sc=still&&old?old.scrollTop:0,v=c.v.slice().sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time)),n=c.cl.cms.length,sn=c.cl.sn;
+sheet(`<div class="row2"><span class="sm mu">Картка клієнтки</span><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div>
+<div class="cld"><div class="clm" style="border-left-color:${CC[c.cl.c][0]}"><div class="cln"><h2>${esc(c.name)}</h2><button class="ib" aria-label="Змінити ім’я та колір" onclick="clEd('${k}')">${IC.ed}</button></div><p class="mu sm">${esc(c.phone)}</p></div>
+<div class="cls"><textarea id="csn" rows="3" maxlength="40" aria-label="Коротка замітка, до 40 символів" placeholder="Коротко: що важливо пам’ятати" oninput="snIn('${k}',this)" onblur="snOut('${k}',this)" onkeydown="if(event.key=='Enter'){event.preventDefault();this.blur()}">${esc(sn)}</textarea><small><span>Коротка замітка</span><span id="csc">${sn.length}/40</span></small></div></div>
+<button class="btn g" onclick="cmOpen('${k}')">${n?'Відкрити коментарі · '+n:'Додати коментар'}</button>
+<label class="f">Історія візитів</label>${v.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+" дн. тому":wd(a.o)+", "+fd(a.o)} · ${a.time}</span>${a.note?`<br><span class="sm">📝 ${esc(a.note)}</span>`:''}</span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join("")}<button class="btn" onclick="cliNew('${k}')">Створити запис</button>`);
+if(still){const x=$('#ov .sh');x.scrollTop=sc;x.style.animation='none'}}
+function snIn(k,el){const v=el.value.replace(/\s*\n\s*/g,' ').slice(0,40);if(v!=el.value)el.value=v;S.cl[k].sn=v;$('#csc').textContent=v.length+'/40';render()}
+function snOut(k,el){const v=el.value.trim();el.value=v;S.cl[k].sn=v;const c=$('#csc');if(c)c.textContent=v.length+'/40';render()}
 function cliNew(k){const c=cliMap()[k];closeS();S.tab='cal';render();quick();if(c){$('#qn').value=c.name;$('#qp').value=c.phone}}
+/* Зміна імені та кольору — вікно поверх картки */
+function clEd(k){const c=cliMap()[k];if(!c)return;S.cc=c.cl.c;sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Редагувати клієнтку</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div>
+<label class="f" for="cen">Ім’я <span class="rq">*</span></label><input id="cen" maxlength="60" value="${esc(c.name)}" oninput="clrE(this,'c')">
+<p class="sm mu" style="margin:6px 2px 0">Нове ім’я з’явиться в усіх записах цієї клієнтки.</p>
+<label class="f" id="ccl">Колір смужки</label><div class="ccr" role="radiogroup" aria-labelledby="ccl">${CC.map((x,i)=>`<button type="button" role="radio" class="ccb ${i==S.cc?'on':''}" style="background:${x[0]}" aria-label="${x[1]}" aria-checked="${i==S.cc}" onclick="clPk(${i})">${i==S.cc?'✓':''}</button>`).join('')}</div>
+<div class="row2" style="gap:10px;margin-top:16px"><button class="btn g" style="margin:0" onclick="closeS2()">Скасувати</button><button class="btn" style="margin:0" onclick="clSv('${k}')">Зберегти</button></div>`)}
+function clPk(i){S.cc=i;document.querySelectorAll('.ccb').forEach((b,j)=>{b.classList.toggle('on',j==i);b.setAttribute('aria-checked',j==i);b.textContent=j==i?'✓':''})}
+function clSv(k){const el=$('#cen'),n=el.value.trim();if(!n){if(!el.classList.contains('bad')){el.classList.add('bad');el.insertAdjacentHTML('afterend','<div class="er">Вкажіть ім’я</div>')}el.focus();return}
+if(n!=cliMap()[k].name)clRn(k,n);S.cl[k].c=S.cc;closeS2();render();cli(k,1);toast('Збережено')}
+/* Коментарі про клієнтку — вікно поверх картки; клієнтки їх не бачать */
+function cmOpen(k){S.ce=0;S.cd='';S.cdE=0;cmS(k)}
+function cmS(k,still){const c=cliMap()[k];if(!c)return;const L=c.cl.cms.slice().sort((a,b)=>b.t-a.t);
+sheet2(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Коментарі</h2><p class="mu sm" style="margin:0">${esc(c.name)} · бачите лише ви</p></div><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div>
+<label class="f" for="cmn">Новий коментар</label><textarea id="cmn" class="${S.cdE?'bad':''}" maxlength="500" placeholder="Що важливо пам’ятати про клієнтку" oninput="S.cd=this.value;S.cdE=0;clrE(this,'c')">${esc(S.cd)}</textarea>${S.cdE?'<div class="er">Напишіть текст коментаря</div>':''}
+<button class="btn" onclick="cmAdd('${k}')">Додати коментар</button>
+${L.length?L.map(x=>S.ce==x.id?`<div class="card cmi"><label class="f" for="cme" style="margin-top:0">Редагування коментаря</label><textarea id="cme" maxlength="500">${esc(x.x)}</textarea><div class="row2" style="gap:10px;margin-top:10px"><button class="btn g" style="margin:0" onclick="S.ce=0;cmS('${k}',1)">Скасувати</button><button class="btn" style="margin:0" onclick="cmSv('${k}',${x.id})">Зберегти</button></div></div>`:`<div class="card cmi"><div class="cmt">${esc(x.x)}</div><div class="row2" style="margin-top:8px"><span class="sm mu">${cr((Date.now()-x.t)/6e4)}${x.ed?' · змінено':''}</span><span class="row2" style="gap:6px"><button class="ib" aria-label="Редагувати коментар" onclick="S.ce=${x.id};cmS('${k}',1)">${IC.ed}</button><button class="ib dl" aria-label="Видалити коментар" onclick="cmDl('${k}',${x.id})">${IC.tr}</button></span></div></div>`).join(''):'<div class="brk" style="margin-top:14px">Коментарів ще немає.</div>'}`,still)}
+function cmAdd(k){const x=S.cd.trim();if(!x){S.cdE=1;cmS(k,1);$('#cmn').focus();return}S.cl[k].cms.push({id:S.cmid++,t:Date.now(),x});S.cd='';S.cdE=0;cmS(k,1);cli(k,1);toast('Коментар додано')}
+function cmSv(k,id){const x=$('#cme').value.trim();if(!x){toast('Коментар не може бути порожнім');return}const m=S.cl[k].cms.find(y=>y.id==id);if(m){m.x=x;m.ed=Date.now()}S.ce=0;cmS(k,1);toast('Коментар змінено')}
+function cmDl(k,id){const m=S.cl[k].cms.find(y=>y.id==id);if(!m)return;sheet2(`<h2 style="margin-top:0">Видалити коментар?</h2><div class="cq sm cmt">${esc(m.x)}</div><p class="sm">Відновити його після видалення не вийде.</p><button class="btn" style="background:var(--bad);box-shadow:none" onclick="cmDlY('${k}',${id})">Так, видалити</button><button class="btn g" onclick="cmS('${k}',1)">Назад</button>`,1)}
+function cmDlY(k,id){S.cl[k].cms=S.cl[k].cms.filter(y=>y.id!=id);S.ce=0;cmS(k,1);cli(k,1);toast('Коментар видалено')}
 function nextAp(){const n=Date.now();return S.appts.filter(a=>a.svc&&["new","conf"].includes(a.st)&&st0(a)>n).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time))[0]}
 function rem(){const a=nextAp();return `<h1>Нагадування</h1><p class="mu sm">Так клієнтка бачить повідомлення в Telegram. Натисніть кнопку — календар оновиться.</p>
 ${a?`<div class="tg"><div class="sm" style="margin-bottom:6px">Нагадування для: <b>${esc(a.name)}</b></div><div class="m">За годинку вже творимо красу 💅 Чекаю на тебе о ${a.time}! Підтверджуєш, що все в силі?</div><div class="k"><button onclick="reply(${a.id},'conf')">Підтверджую</button><button onclick="reply(${a.id},'canc')">Не зможу прийти</button></div></div>
