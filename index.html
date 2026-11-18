@@ -110,6 +110,30 @@ input.bad,select.bad,textarea.bad{border-color:var(--bad);background:#fff5f6}
 #sp .t1{color:transparent;background:linear-gradient(105deg,#fff0 42%,#ffffffe6 50%,#fff0 58%) 150% 0/250% 100% no-repeat,linear-gradient(120deg,#2b1b6b,#a2408f 42%,#ff6fa5 62%,#7d5be0);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 20px #f2528a40);animation:spsh 2.2s ease-in-out 1.2s forwards}
 @keyframes spsh{to{background-position:-60% 0,0 0}}
 @media(prefers-reduced-motion:reduce){#sp .tb{opacity:1;filter:none;transform:none;letter-spacing:-.01em;animation:none}#sp .t1{animation:none}}
+/* Етап 7: каталог налаштувань, нагадування, демо-сповіщення */
+.slt{margin:16px 4px 6px;color:var(--pu);font-size:13px;font-weight:700}
+.slg{padding:4px 0;margin:0;overflow:hidden}
+.sli{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px 14px;text-align:left;border-top:1px solid var(--ln)}
+.sli:first-child{border-top:0}
+.sli>span{flex:1;min-width:0}
+.sli b{display:block;color:var(--in);font-weight:700;line-height:1.25}
+.sli small{display:block;margin-top:2px;color:var(--mu);font-size:12.5px;line-height:1.3}
+.sli>i{flex:none;color:var(--pu);font-style:normal;font-size:20px;font-weight:700}
+.sli.off .ib{background:var(--ln);color:var(--mu)}
+.sli.off b{color:var(--mu)}
+.sli .chip{flex:none;font-size:11px;padding:3px 8px}
+.rmr{padding:8px 16px;margin:8px 0}
+.rmb{flex:1;min-width:0;min-height:48px;text-align:left}
+.rmb b{display:block;color:var(--in)}
+.rmb span{color:var(--pu);font-weight:600}
+.xo[disabled]{opacity:.35;cursor:not-allowed}
+.xts.rmc{margin-top:8px}
+.xts.rmc .xo{color:var(--pu);font-size:13px}
+.rmf{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;min-height:44px}
+#dn{position:fixed;z-index:40;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:496px;display:grid;gap:8px}
+.dni{display:flex;align-items:flex-start;gap:10px;padding:12px 10px 12px 14px;border-radius:20px;background:#fff;box-shadow:0 12px 34px #4a2f8a40;border-left:4px solid var(--ac)}
+.dni>div{flex:1;min-width:0;overflow-wrap:anywhere}
+.dni b{display:block;color:var(--in)}
 /* Етап 6: додатковий час і крок телефону */
 .xts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .xo{min-height:44px;border-radius:14px;background:#ffffffb0;border:1px solid var(--ln);color:var(--mu);font-weight:700;font-size:14px}
@@ -154,7 +178,7 @@ button.pr{width:100%;text-align:left}
 .seg button .k{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--ac2);color:var(--acd);font-size:11px;font-weight:800}
 .seg button.on .k{background:var(--ac);color:#fff}
 </style></head><body>
-<div id="app"></div><div id="ov"></div><div id="ov2"></div><div id="ts"></div>
+<div id="app"></div><div id="ov"></div><div id="ov2"></div><div id="ts"></div><div id="dn"></div>
 <div id="sp" aria-hidden="true"><div class="tb"><span class="t1">Тобі</span></div><canvas id="spc"></canvas></div>
 <script>
 const SV=[{id:1,n:"Манікюр + покриття гель-лаком",d:120,p:850},{id:2,n:"Класичний манікюр",d:75,p:500},{id:3,n:"Зняття + манікюр + покриття",d:150,p:950},{id:4,n:"Дизайн (1–2 нігті)",d:30,p:150}];
@@ -166,6 +190,9 @@ const wd=o=>o==0?"Сьогодні":o==1?"Завтра":WD[D(o).getDay()];
 const t2m=t=>{const[a,b]=t.split(":");return +a*60+ +b},m2t=m=>String(m/60|0).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sv=id=>SV.find(s=>s.id==id);
+const RMT0="{ім’я}, нагадую про твій запис {дата} о {час} 💅 Підтверджуєш, що все в силі?";
+const RMK=[['Ім’я','{ім’я}'],['Дата','{дата}'],['Час','{час}'],['Послуга','{послуга}']];
+const NT=[['nw','Новий запис','Клієнтка записалась онлайн'],['ok','Клієнтка підтвердила візит','Відповідь на нагадування'],['cn','Клієнтка скасувала візит','Відповідь на нагадування']];
 const TEST=true;/* false = лише іконка профілю */
 const WH0=540,WH1=1200;/* робочі години 9:00–20:00 у хвилинах — єдине місце */
 const pk=p=>String(p||"").replace(/\D/g,"").slice(-10);/* ключ клієнтки: останні 10 цифр номера */
@@ -177,7 +204,7 @@ function phIn(el,e){const r=el.value,c=el.selectionStart;if(e&&e.inputType=='del
 function phFoc(el){if(!el.value){el.value='+380 ';el.setSelectionRange(5,5)}}
 function phBl(el){if(phE(el.value))el.value=''}
 const T0=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()},AG=m=>Math.max(T0(),Date.now()-m*6e4);
-let S={reqs:[{id:1,type:'new',st:'pending',name:'Софія Гриценко',phone:'+380 68 777 88 99',svc:1,ago:45,o:1,t:'16:00',cm:'Хочу ніжно-рожевий дизайн'},{id:2,type:'move',st:'pending',name:'Наталія Бондар',phone:'+380 66 444 55 66',svc:1,ago:1100,o:2,t:'14:00',aid:4,cm:'Виникли робочі справи'},{id:3,type:'move',st:'pending',name:'Марія Шевчук',phone:'+380 50 222 33 44',svc:2,ago:180,o:1,t:'11:30',aid:2,cm:''}],sset:'sv',cm:{b:0,w:0},we:{},wf:null,be:{},offs:[{id:1,t:'w',dow:0}],oid:2,ct:'book',prof:null,view:"day",mode:"client",step:1,tab:"cal",day:0,q:"",rem24:false,id:30,
+let S={reqs:[{id:1,type:'new',st:'pending',name:'Софія Гриценко',phone:'+380 68 777 88 99',svc:1,ago:45,o:1,t:'16:00',cm:'Хочу ніжно-рожевий дизайн'},{id:2,type:'move',st:'pending',name:'Наталія Бондар',phone:'+380 66 444 55 66',svc:1,ago:1100,o:2,t:'14:00',aid:4,cm:'Виникли робочі справи'},{id:3,type:'move',st:'pending',name:'Марія Шевчук',phone:'+380 50 222 33 44',svc:2,ago:180,o:1,t:'11:30',aid:2,cm:''}],sset:'',cm:{b:0,w:0},we:{},wf:null,be:{},offs:[{id:1,t:'w',dow:0}],oid:2,ct:'book',prof:null,view:"day",mode:"client",step:1,tab:"cal",day:0,q:"",rm:[{h:24,on:true},{h:1,on:true}],rmt:RMT0,nt:{nw:true,ok:true,cn:true},nq:[],id:30,
 sel:{svc:null,day:1,time:null,name:"",phone:"",comment:"",pay:"cash"},last:null,
 appts:[
 {id:1,o:0,time:"10:00",svc:1,name:"Олена Коваль",phone:"+380 67 111 22 33",st:"done",paid:true,note:"Любить нюд, коротка форма"},
@@ -208,9 +235,9 @@ function closeS(){$("#ov").innerHTML="";closeS2()}
 function sheet2(h,still){const old=$('#ov2 .sh'),sc=still&&old?old.scrollTop:0;$("#ov2").innerHTML=`<div class="ov" onclick="if(event.target==this)closeS2()"><div class="sh" role="dialog" aria-modal="true">${h}</div></div>`;if(still){const x=$('#ov2 .sh');x.scrollTop=sc;x.style.animation='none'}}
 function closeS2(){$("#ov2").innerHTML=""}
 function topbar(){return `<div class="top"><span class="bm" aria-hidden="true">Т</span>${TEST?`<div class="seg" title="Тестовий перемикач"><button class="${S.mode=="client"?"on":""}" onclick="mode('client')">Клієнтка</button><button class="${S.mode=="master"?"on":""}" onclick="mode('master')">Кабінет майстра</button></div>`:`<span class="logo">Тобі</span>`}<button class="prof ${S.mode=="master"?"on":""}" aria-label="Кабінет майстра" onclick="mode(S.mode=='master'?'client':'master')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div>`}
-function mode(m){S.mode=m;render();scrollTo(0,0)}
+function mode(m){const p=S.mode;S.mode=m;render();scrollTo(0,0);if(m=='master')dnShow();else if(p=='master'){S.nq=[];dnShow()}}
 function render(){autoDone();syncCl();$("#app").innerHTML=topbar()+(S.mode=="client"?client():master());
-$("#app").insertAdjacentHTML("beforeend",S.mode=="master"?`<nav class="nav"><div>${[["cal","Календар",'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>'],["cl","Клієнтки",'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0m2-13a4 4 0 0 1 0 8m1 2a6 6 0 0 1 3 5"/>'],"+",["rq","Запити",'<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>'],["st","Налаштування",'<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>']].map(x=>x=="+"?`<button class="fab" aria-label="Новий запис" onclick="quick()">＋</button>`:`<button class="${S.tab==x[0]?"on":""}" onclick="S.tab='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}${x[0]=="rq"&&pend()?`<i class="bdg">${pend()}</i>`:""}</button>`).join("")}</div></nav>`:clientNav())}
+$("#app").insertAdjacentHTML("beforeend",S.mode=="master"?`<nav class="nav"><div>${[["cal","Календар",'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>'],["cl","Клієнтки",'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0m2-13a4 4 0 0 1 0 8m1 2a6 6 0 0 1 3 5"/>'],"+",["rq","Запити",'<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>'],["st","Налаштування",'<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>']].map(x=>x=="+"?`<button class="fab" aria-label="Новий запис" onclick="quick()">＋</button>`:`<button class="${S.tab==x[0]?"on":""}" onclick="S.tab='${x[0]}';${x[0]=='st'?"S.sset='';":''}render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}${x[0]=="rq"&&pend()?`<i class="bdg">${pend()}</i>`:""}</button>`).join("")}</div></nav>`:clientNav())}
 /* ---------- CLIENT ---------- */
 function client(){if(S.ct=='prof')return profV();const s=S.sel,st=S.step;
 /* Кроки: 1 послуга, 1.5 телефон, 2 дата й час, 3 дані, 4 готово */
@@ -255,7 +282,7 @@ function book(){sv2();const s=S.sel,e={};if(!s.name.trim())e.n='Вкажіть �
 if(Object.keys(e).length){S.be=e;render();setTimeout(()=>{const x=document.querySelector('.er');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})},50);return}S.be={};
 if(!cslots(s.day,cD(s.svc)).some(x=>x.t==s.time&&x.f)){toast('Цей час уже недоступний, оберіть інший');S.sel.time=null;S.step=2;render();return}
 if(!S.prof&&$("#rm")&&$("#rm").checked)S.prof={name:s.name.trim(),phone:s.phone,email:""};
-const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};const b={...a,name:cName(s.phone,a.name)};exPut(b);S.appts.push(b);S.last=a;S.step=4;render();scrollTo(0,0)}
+const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};const b={...a,name:cName(s.phone,a.name)};exPut(b);S.appts.push(b);dnPush('nw',`${b.name} · ${sv(b.svc).n} · ${dl(b.o,b.time)}`);S.last=a;S.step=4;render();scrollTo(0,0)}
 
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()},TT=(a,b)=>{const r=[];for(let m=a;m<=b;m+=30)r.push(m2t(m));return r};
 function cslots(o,d){return slots(o,d).map(x=>({t:x.t,f:x.f&&!(o==0&&t2m(x.t)<=nowMin())}))}
@@ -298,7 +325,12 @@ S.wait.push({id:S.id++,name:cName(f.phone,f.name.trim()),phone:f.phone.trim(),sv
 
 /* ---------- MASTER ---------- */
 function master(){return S.tab=="cal"?cal():S.tab=="cl"?clients():S.tab=="rq"?reqs():S.tab=="st"?stg():cal()}
-function stg(){const t=S.sset||'sv';return `<h1>Налаштування</h1><div class="seg vw">${[['sv','Послуги'],['rm','Нагадування']].map(v=>`<button class="${t==v[0]?'on':''}" onclick="S.sset='${v[0]}';render()">${v[1]}</button>`).join('')}</div>`+(t=='sv'?svcs():rem())}
+/* Етап 7: головний екран налаштувань. Рядок без k ще не працює і позначений «Незабаром». */
+const SG=[['Робота',[['sv','Послуги','Назва, тривалість, ціна й видимість','<path d="M9 3h6v5a3 3 0 0 1-6 0z"/><path d="M12 11v10"/>'],['','Графік і правила запису','Робочі години, перерви, вихідні','<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>']]],
+['Клієнтки',[['','Онлайн-запис','Посилання на сторінку запису','<path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/>'],['rm','Нагадування та сповіщення','Повідомлення клієнткам і сповіщення для вас','<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>']]],
+['Акаунт',[['','Мій профіль','Контакти, фото, місце прийому','<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'],['','Акаунт і безпека','Вхід, пароль, збереження даних','<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>']]]];
+function stRow(r){const ic=`<em class="ib" style="font-style:normal" aria-hidden="true"><svg viewBox="0 0 24 24">${r[3]}</svg></em><span><b>${r[1]}</b><small>${r[2]}</small></span>`;return r[0]?`<button class="sli" onclick="S.sset='${r[0]}';render();scrollTo(0,0)">${ic}<i aria-hidden="true">›</i></button>`:`<div class="sli off" aria-disabled="true">${ic}<em class="chip done" style="font-style:normal">Незабаром</em></div>`}
+function stg(){const t=S.sset;if(t=='sv'||t=='rm')return `<button class="back" onclick="S.sset='';render();scrollTo(0,0)">← Налаштування</button>`+(t=='sv'?svcs():rem());return `<h1>Налаштування</h1><p class="mu sm" style="margin:0">Послуги, графік і повідомлення в одному місці.</p>${SG.map(g=>`<div class="slt">${g[0]}</div><div class="card slg">${g[1].map(stRow).join('')}</div>`).join('')}`}
 /* Що чекає рішення майстрині — ЄДИНЕ правило для лічильника в календарі, бейджа й вкладки «Запити».
    Не залежить від обраного дня. new — записи «Новий» (самозапис клієнток, зокрема з минулим часом)
    і запити на новий запис; move — запити на перенесення. */
@@ -602,13 +634,34 @@ sheet2(`<h2 style="margin-top:0">Видалити клієнтку?</h2><div cla
 function clDelY(k){delete S.cl[k];S.clx[k]=S.id;S.wait=S.wait.filter(x=>pk(x.phone)!=k);closeS();render();toast('Клієнтку видалено')}
 function clRq(t){closeS();S.tab='rq';S.rqt=t;render();scrollTo(0,0)}
 function nextAp(){const n=Date.now();return S.appts.filter(a=>a.svc&&["new","conf"].includes(a.st)&&st0(a)>n).sort((a,b)=>a.o-b.o||t2m(a.time)-t2m(b.time))[0]}
-function rem(){const a=nextAp();return `<h1>Нагадування</h1><p class="mu sm">Так клієнтка бачить повідомлення в Telegram. Натисніть кнопку — календар оновиться.</p>
-${a?`<div class="tg"><div class="sm" style="margin-bottom:6px">Нагадування для: <b>${esc(a.name)}</b></div><div class="m">За годинку вже творимо красу 💅 Чекаю на тебе о ${a.time}! Підтверджуєш, що все в силі?</div><div class="k"><button onclick="reply(${a.id},'conf')">Підтверджую</button><button onclick="reply(${a.id},'canc')">Не зможу прийти</button></div></div>
-<p class="sm mu">Зараз: <span class="chip ${a.st}">${ST[a.st]}</span> · ${wd(a.o)}, ${a.time}</p>`:`<div class="brk">Немає майбутніх записів для нагадування.</div>`}
-<h2 style="margin-top:18px">Коли нагадувати</h2><div class="card row2"><span>За 1 годину<br><span class="sm mu">за замовчуванням</span></span><button class="tog on" aria-label="За годину" disabled></button></div>
-<div class="card row2"><span>За 24 години</span><button class="tog ${S.rem24?"on":""}" aria-label="За 24 години" onclick="S.rem24=!S.rem24;render()"></button></div>
-<p class="sm mu">Спершу Telegram. Viber перевіряємо окремо.</p>`}
-function reply(id,s){const a=S.appts.find(x=>x.id==id);if(!a)return;if(a.st==s){toast('Статус уже: '+ST[s]);return}if(!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}if(a.st=='new')a.dec={r:s,t:Date.now()};a.st=s;a.seen=true;render();if(s=="canc"){toast(esc(a.name)+" не зможе прийти");offer(a)}else toast(esc(a.name)+" підтвердила візит")}
+/* Нагадування: нічого не надсилається, це попередній перегляд */
+const rmL=h=>`За ${h} ${pl(h,'годину','години','годин')} до візиту`;
+function rmTx(a){return (S.rmt.trim()||RMT0).replace(/\{ім['’]я\}/gi,a.name.split(' ')[0]).replace(/\{дата\}/gi,fd(a.o)).replace(/\{час\}/gi,a.time).replace(/\{послуга\}/gi,sv(a.svc).n)}
+function rem(){if(!S.rmt.trim())S.rmt=RMT0;const a=nextAp();return `<h1>Нагадування та сповіщення</h1><div class="wn"><b>Це попередній перегляд.</b> Повідомлення поки не надсилаються.</div>
+<h2 style="margin-top:18px">Повідомлення клієнткам</h2><label class="f">Коли нагадувати</label>
+${S.rm.map((r,i)=>`<div class="card row2 rmr"><button class="rmb" onclick="rmSh(${i})"><b>${i?'Друге':'Перше'} нагадування</b><span class="sm">${rmL(r.h)} ›</span></button><button class="tog ${r.on?'on':''}" aria-label="${i?'Друге':'Перше'} нагадування" aria-pressed="${r.on}" onclick="rmOn(${i})"></button></div>`).join('')}
+<label class="f" for="rmt">Текст повідомлення</label><textarea id="rmt" rows="4" maxlength="300" oninput="rmIn(this)">${esc(S.rmt)}</textarea><div class="er" id="rme" hidden>Поле порожнє, тому буде стандартний текст</div>
+<div class="sm mu" style="margin-top:8px">Додати в текст дані клієнтки:</div><div class="xts rmc">${RMK.map((k,i)=>`<button class="xo" onmousedown="event.preventDefault()" onclick="rmIns(${i})">${k[0]}</button>`).join('')}</div>
+<div class="rmf"><span class="sm mu" id="rmn">${S.rmt.length} / 300</span><button class="lk" onclick="rmRs()">Повернути стандартний</button></div>
+<label class="f">Як це виглядатиме</label>
+${a?`<div class="tg"><div class="sm" style="margin-bottom:6px">Приклад для: <b>${esc(a.name)}</b></div><div class="m cmt" id="rmp">${esc(rmTx(a))}</div><div class="k"><button onclick="reply(${a.id},'conf')">Підтверджую</button><button onclick="reply(${a.id},'canc')">Не зможу прийти</button></div></div>
+<p class="sm mu">Кнопки працюють для перевірки: вони змінюють статус цього запису в календарі. Зараз: <span class="chip ${a.st}">${ST[a.st]}</span> · ${wd(a.o)}, ${a.time}</p>`:`<div class="brk">Немає майбутніх записів для прикладу.</div>`}
+<label class="f">Канали доставки</label><div class="card" style="padding:4px 16px;margin-top:0">${['Telegram','Viber'].map(x=>`<div class="pr"><span>${x}</span><span class="chip done">Незабаром</span></div>`).join('')}</div>
+<h2 style="margin-top:22px">Сповіщення майстрині</h2><p class="sm mu" style="margin:0 0 8px">Поки що вони з’являються лише в кабінеті з позначкою «Демо». На телефон не приходять. Нові записи й запити також видно в лічильнику вкладки «Запити».</p>
+<div class="card" style="padding:4px 16px;margin-top:0">${NT.map(n=>`<div class="pr"><span style="min-width:0">${n[1]}<br><span class="sm mu">${n[2]}</span></span><button class="tog ${S.nt[n[0]]?'on':''}" aria-label="${n[1]}" aria-pressed="${!!S.nt[n[0]]}" onclick="ntT('${n[0]}')"></button></div>`).join('')}<div class="pr"><span style="min-width:0">Запит на перенесення</span><span class="chip done">Незабаром</span></div></div>`}
+function rmOn(i){S.rm[i].on=!S.rm[i].on;render()}
+function ntT(k){S.nt[k]=!S.nt[k];render()}
+function rmSh(i){const r=S.rm[i],o=S.rm[1-i].h;sheet(`<h2 style="margin-top:0">${i?'Друге':'Перше'} нагадування</h2><p class="mu sm">За скільки годин до візиту нагадати?</p><div class="xts">${[...Array(24)].map((_,x)=>{const h=x+1;return `<button class="xo ${h==r.h?'on':''}" aria-pressed="${h==r.h}" ${h==o?'disabled':''} onclick="rmH(${i},${h})">${h} год</button>`}).join('')}</div><p class="sm mu" style="margin-bottom:0">Час іншого нагадування (${o} год) обрати не можна.</p>`)}
+/* Перше нагадування завжди раніше за друге */
+function rmH(i,h){S.rm[i].h=h;S.rm.sort((a,b)=>b.h-a.h);closeS();render()}
+function rmIn(el){S.rmt=el.value;const a=nextAp(),p=$('#rmp');if(p&&a)p.textContent=rmTx(a);$('#rmn').textContent=el.value.length+' / 300';$('#rme').hidden=!!el.value.trim()}
+function rmIns(i){const el=$('#rmt'),k=RMK[i][1],b=el.selectionStart,e=el.selectionEnd;if(el.value.length-(e-b)+k.length>300){toast('Текст задовгий');return}el.setRangeText(k,b,e,'end');el.focus();rmIn(el)}
+function rmRs(){S.rmt=RMT0;render();toast('Повернуто стандартний текст')}
+/* Демо-сповіщення майстрині: лише всередині застосунку. Повертає false, якщо цей тип вимкнено. */
+function dnPush(k,x){if(!S.nt[k])return false;S.nq.push({id:Date.now()+Math.random(),t:NT.find(n=>n[0]==k)[1],x});if(S.mode=='master')dnShow();return true}
+function dnShow(){clearTimeout(dnShow.t);$('#dn').innerHTML=S.nq.map(n=>`<div class="dni fx" role="status"><div><span class="chip done">Демо</span><b style="margin-top:4px">${esc(n.t)}</b><span class="sm mu">${esc(n.x)}</span></div><button class="xb" aria-label="Закрити сповіщення" onclick="dnX(${n.id})">✕</button></div>`).join('');if(S.nq.length)dnShow.t=setTimeout(()=>{S.nq=[];dnShow()},8000)}
+function dnX(id){S.nq=S.nq.filter(n=>n.id!=id);dnShow()}
+function reply(id,s){const a=S.appts.find(x=>x.id==id);if(!a)return;if(a.st==s){toast('Статус уже: '+ST[s]);return}if(!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}if(a.st=='new')a.dec={r:s,t:Date.now()};a.st=s;a.seen=true;render();const x=`${a.name} · ${dl(a.o,a.time)}`;if(s=="canc"){if(!dnPush('cn',x))toast(esc(a.name)+" не зможе прийти");offer(a)}else if(!dnPush('ok',x))toast(esc(a.name)+" підтвердила візит")}
 render();
 (function(){const sp=document.getElementById('sp');if(!sp)return;const tb=sp.querySelector('.tb'),c=document.getElementById('spc'),x=c.getContext('2d'),rm=matchMedia('(prefers-reduced-motion:reduce)').matches,dp=Math.min(devicePixelRatio||1,2);let W,H,done=false,raf;
 function rs(){W=innerWidth;H=innerHeight;c.width=W*dp;c.height=H*dp;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(dp,0,0,dp,0,0)}rs();
