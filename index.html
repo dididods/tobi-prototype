@@ -110,6 +110,15 @@ input.bad,select.bad,textarea.bad{border-color:var(--bad);background:#fff5f6}
 #sp .t1{color:transparent;background:linear-gradient(105deg,#fff0 42%,#ffffffe6 50%,#fff0 58%) 150% 0/250% 100% no-repeat,linear-gradient(120deg,#2b1b6b,#a2408f 42%,#ff6fa5 62%,#7d5be0);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 20px #f2528a40);animation:spsh 2.2s ease-in-out 1.2s forwards}
 @keyframes spsh{to{background-position:-60% 0,0 0}}
 @media(prefers-reduced-motion:reduce){#sp .tb{opacity:1;filter:none;transform:none;letter-spacing:-.01em;animation:none}#sp .t1{animation:none}}
+/* Етап 6: додатковий час і крок телефону */
+.xts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.xo{min-height:44px;border-radius:14px;background:#ffffffb0;border:1px solid var(--ln);color:var(--mu);font-weight:700;font-size:14px}
+.xo.on{background:var(--in);border-color:var(--in);color:#fff}
+.exl{min-height:44px;margin-top:10px;gap:10px;font-size:14px;font-weight:600}
+.exl input{width:22px;height:22px;flex:none}
+.exh{margin:6px 2px 0;color:var(--pu);font-weight:600}
+.pho{margin:0;padding:10px 14px}
+.pho .back{margin:0;min-height:44px}
 /* Етап 5: список клієнток */
 .seg.cso{margin-top:10px}
 .seg.cso button{padding:8px 4px;font-size:13px}
@@ -160,6 +169,13 @@ const sv=id=>SV.find(s=>s.id==id);
 const TEST=true;/* false = лише іконка профілю */
 const WH0=540,WH1=1200;/* робочі години 9:00–20:00 у хвилинах — єдине місце */
 const pk=p=>String(p||"").replace(/\D/g,"").slice(-10);/* ключ клієнтки: останні 10 цифр номера */
+/* Маска номера: +380 67 111 22 33. Зайві 0, 80 чи 380 на початку прибираються. Номер іншої країни вводиться з «+» і лишається без маски. */
+const phE=v=>/^\+?3?8?0?\s*$/.test(v);
+function phFmt(v){v=String(v||'').trim();const d=v.replace(/\D/g,'');if(!d)return v[0]=='+'?'+':'';if(v[0]=='+'&&!d.startsWith('380'))return '+'+d.slice(0,15);const n=d.replace(/^(?:380|80|0)+/,'');return '+380 '+[n.slice(0,2),n.slice(2,5),n.slice(5,7),n.slice(7,9)].filter(Boolean).join(' ')}
+function phOk(v){v=String(v||'').trim();const d=v.replace(/\D/g,'');return v[0]=='+'&&!d.startsWith('380')?d.length>=10:d.replace(/^(?:380|80|0)+/,'').length==9}
+function phIn(el,e){const r=el.value,c=el.selectionStart;if(e&&e.inputType=='deleteContentBackward'&&phE(r))return;const f=phFmt(r);el.value=f;if(c<r.length){const p=Math.min(f.length,c<5&&f.startsWith('+380 ')?5:phFmt(r.slice(0,c)).length);el.setSelectionRange(p,p)}}
+function phFoc(el){if(!el.value){el.value='+380 ';el.setSelectionRange(5,5)}}
+function phBl(el){if(phE(el.value))el.value=''}
 const T0=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()},AG=m=>Math.max(T0(),Date.now()-m*6e4);
 let S={reqs:[{id:1,type:'new',st:'pending',name:'Софія Гриценко',phone:'+380 68 777 88 99',svc:1,ago:45,o:1,t:'16:00',cm:'Хочу ніжно-рожевий дизайн'},{id:2,type:'move',st:'pending',name:'Наталія Бондар',phone:'+380 66 444 55 66',svc:1,ago:1100,o:2,t:'14:00',aid:4,cm:'Виникли робочі справи'},{id:3,type:'move',st:'pending',name:'Марія Шевчук',phone:'+380 50 222 33 44',svc:2,ago:180,o:1,t:'11:30',aid:2,cm:''}],sset:'sv',cm:{b:0,w:0},we:{},wf:null,be:{},offs:[{id:1,t:'w',dow:0}],oid:2,ct:'book',prof:null,view:"day",mode:"client",step:1,tab:"cal",day:0,q:"",rem24:false,id:30,
 sel:{svc:null,day:1,time:null,name:"",phone:"",comment:"",pay:"cash"},last:null,
@@ -174,8 +190,17 @@ appts:[
 {id:8,o:-7,time:"16:00",svc:2,name:"Марія Шевчук",phone:"+380 50 222 33 44",st:"done",paid:true,note:"Алергія на один бренд бази — уточнити"}],
 wait:[{id:1,name:'Софія Гриценко',phone:'+380 68 777 88 99',svc:2,o:1,mode:'after',t1:'15:00',t2:''},{id:2,name:'Вікторія Мазур',phone:'+380 97 888 99 00',svc:1,o:0,mode:'any',t1:'',t2:''}]};
 const $=s=>document.querySelector(s);
-function busy(o,ign){const r=[];S.appts.filter(a=>a.o==o&&a.st!="canc"&&a.st!="noshow"&&a.id!=ign).forEach(a=>{const s=t2m(a.time);r.push([s,s+(a.svc?sv(a.svc).d:a.dur||30)])});return r}
-function slots(o,dur,ign){if(isOff(o))return[];const b=busy(o,ign),r=[];for(let m=WH0;m+dur<=WH1;m+=30)r.push({t:m2t(m),f:!b.some(x=>m<x[1]&&m+dur>x[0])});return r}
+/* Тривалість запису: послуга + додатковий час саме цього запису (a.ex). a.xm — хвилини, які не вмістилися */
+const apD=a=>a.svc?sv(a.svc).d+(a.ex||0):a.dur||30;
+function clEx(ph){const c=S.cl[pk(ph)];return c&&c.ex||0}
+function tFree(o,m,d,ign){return !isOff(o)&&m>=WH0&&m+d<=WH1&&!busy(o,ign).some(b=>m<b[1]&&m+d>b[0])}
+/* Додатковий час застосовується повністю або не застосовується, але запис ніколи не відхиляється через нього */
+function exPut(a,off){const w=clEx(a.phone),x=!off&&w&&tFree(a.o,t2m(a.time),sv(a.svc).d+w,a.id)?w:0;a.ex=x;a.xm=w&&!x?w:0;return x==w}
+function dTx(a){return `${sv(a.svc).d}${a.ex?' + '+a.ex:''} хв${a.xm?' · без +'+a.xm:''}`}
+function busy(o,ign){const r=[];S.appts.filter(a=>a.o==o&&a.st!="canc"&&a.st!="noshow"&&a.id!=ign).forEach(a=>{const s=t2m(a.time);r.push([s,s+apD(a)])});return r}
+function slots(o,dur,ign,ex){if(isOff(o))return[];const b=busy(o,ign),r=[],hit=(m,d)=>b.some(x=>m<x[1]&&m+d>x[0]);for(let m=WH0;m+dur<=WH1;m+=30){const f=!hit(m,dur);r.push({t:m2t(m),f,x:!!ex&&f&&(m+dur+ex>WH1||hit(m,dur+ex))})}return r}
+/* Список годин у кабінеті: час, де вміщається лише звичайна тривалість, доступний із позначкою */
+function tPut(ts,sl,ex,cur){ts.innerHTML=sl.map(x=>`<option value="${x.t}" ${x.x?'data-x="1"':''} ${x.f?'':'disabled style="color:#a9a3b8"'}>${x.t}${!x.f?' · зайнято':x.x?' · без +'+ex+' хв':''}</option>`).join('');ts.value=cur;if(!ts.value||!ts.selectedOptions[0]||ts.selectedOptions[0].disabled){const f=sl.find(x=>x.f&&!x.x)||sl.find(x=>x.f);if(f)ts.value=f.t}}
 function toast(m){$("#ts").innerHTML=`<div class="toast" role="status">${m}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>$("#ts").innerHTML="",2600)}
 function sheet(h){$("#ov").innerHTML=`<div class="ov" onclick="if(event.target==this)closeS()"><div class="sh" role="dialog" aria-modal="true">${h.includes('class="xb"')?'':'<button class="xb sx" aria-label="Закрити" onclick="closeS()">✕</button>'}${h}</div></div>`}
 function closeS(){$("#ov").innerHTML="";closeS2()}
@@ -188,13 +213,17 @@ function render(){autoDone();syncCl();$("#app").innerHTML=topbar()+(S.mode=="cli
 $("#app").insertAdjacentHTML("beforeend",S.mode=="master"?`<nav class="nav"><div>${[["cal","Календар",'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18"/>'],["cl","Клієнтки",'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0m2-13a4 4 0 0 1 0 8m1 2a6 6 0 0 1 3 5"/>'],"+",["rq","Запити",'<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>'],["st","Налаштування",'<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>']].map(x=>x=="+"?`<button class="fab" aria-label="Новий запис" onclick="quick()">＋</button>`:`<button class="${S.tab==x[0]?"on":""}" onclick="S.tab='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}${x[0]=="rq"&&pend()?`<i class="bdg">${pend()}</i>`:""}</button>`).join("")}</div></nav>`:clientNav())}
 /* ---------- CLIENT ---------- */
 function client(){if(S.ct=='prof')return profV();const s=S.sel,st=S.step;
-const bar=`<div class="steps">${[1,2,3].map(i=>`<i class="${i<=Math.min(st,3)&&st<4?"on":st==4?"on":""}"></i>`).join("")}</div>`;
+/* Кроки: 1 послуга, 1.5 телефон, 2 дата й час, 3 дані, 4 готово */
+const pos={1:1,1.5:2,2:3,3:4}[st]||5,bar=`<div class="steps">${[1,2,3,4].map(i=>`<i class="${i<=pos?"on":""}"></i>`).join("")}</div>`;
 if(st==1)return `<h1>Обери свою послугу</h1><p class="mu">Запис займе хвилину, реєстрація не потрібна.</p>${bar}
 ${rep()}
 ${SV.filter(x=>!x.off).map(x=>`<button class="card svc" onclick="pick(${x.id})"><span><b>${esc(x.n)}</b>${x.desc?`<span class="sm mu" style="display:block">${esc(x.desc)}</span>`:""}<span class="sm mu">${x.d} хв</span></span><span class="price">${x.p} ₴</span></button>`).join("")}`;
-if(st==2){const v=sv(s.svc),sl=cslots(s.day,v.d),free=sl.filter(x=>x.f).length;
-return `<button class="back" aria-label="Назад до послуг" onclick="S.step=1;render()">← Послуги</button><h1>Коли тобі зручно?</h1>${bar}<p class="mu sm">${esc(v.n)} · ${v.d} хв · ${v.p} ₴</p>
-${dpick('b',s.day,o=>cslots(o,v.d).some(x=>x.f))}
+if(st==1.5){const v=sv(s.svc),e=S.be||{};return `<button class="back" aria-label="Назад до послуг" onclick="S.step=1;render()">← Послуги</button><h1>Твій номер телефону</h1>${bar}<p class="mu sm">${esc(v.n)} · ${v.d} хв · ${v.p} ₴</p>
+<label class="f" for="ph0">Телефон <span class="rq">*</span></label><input id="ph0" class="${e.p?'bad':''}" type="tel" value="${esc(phFmt(s.phone))}" placeholder="+380" autocomplete="tel" onfocus="phFoc(this)" onblur="phBl(this);S.sel.phone=this.value" oninput="phIn(this,event);S.sel.phone=this.value;clrE(this,'p')" onkeydown="if(event.key=='Enter')phNext()">${e.p?`<div class="er">${e.p}</div>`:''}
+<button class="btn" onclick="phNext()">Далі</button>`}
+if(st==2){const v=sv(s.svc),sl=cslots(s.day,cD(s.svc)),free=sl.filter(x=>x.f).length;
+return `<button class="back" aria-label="${S.prof?'Назад до послуг':'Назад до телефону'}" onclick="S.step=${S.prof?1:1.5};render()">← ${S.prof?'Послуги':'Телефон'}</button><h1>Коли тобі зручно?</h1>${bar}<p class="mu sm">${esc(v.n)} · ${v.d} хв · ${v.p} ₴</p>
+${dpick('b',s.day,o=>cslots(o,cD(s.svc)).some(x=>x.f))}
 <h2>${wd(s.day)}, ${fd(s.day)}</h2>
 <div class="slots">${sl.map(x=>`<button class="slot ${s.time==x.t?"on":""}" ${x.f?"":"disabled"} onclick="S.sel.time='${x.t}';render()">${x.t}</button>`).join("")}</div>
 ${free<3?`<p class="sm mu">Вільних вікон майже немає.</p>`:""}
@@ -204,7 +233,7 @@ if(st==3){const v=sv(s.svc),e=S.be||{};return `<button class="back" aria-label="
 <div class="card"><b>${esc(v.n)}</b><div class="sm mu">${wd(s.day)}, ${fd(s.day)} о ${s.time} · ${v.d} хв</div></div>
 <p class="sm mu" style="margin:0"><span class="rq">*</span> — обов’язкові поля</p>
 <label class="f">Ім’я <span class="rq">*</span></label><input id="nm" class="${e.n?'bad':''}" value="${esc(s.name||(S.prof?S.prof.name:''))}" autocomplete="name" oninput="clrE(this,'n')">${e.n?`<div class="er">${e.n}</div>`:''}
-<label class="f">Телефон <span class="rq">*</span></label><input id="ph" class="${e.p?'bad':''}" type="tel" value="${esc(s.phone||(S.prof?S.prof.phone:''))}" placeholder="+380" autocomplete="tel" oninput="clrE(this,'p')">${e.p?`<div class="er">${e.p}</div>`:''}
+<label class="f">Телефон</label><div class="card row2 pho"><span>${esc(s.phone)}</span><button type="button" class="back" onclick="sv2();S.step=1.5;render()">Змінити</button></div>
 <label class="f">Коментар (за бажанням)</label><textarea id="cm">${esc(s.comment)}</textarea>
 <label class="f" id="pl">Спосіб оплати</label><div class="pay" role="radiogroup" aria-labelledby="pl">${[['cash','Готівка'],['card','Переказ на картку']].map(k=>`<button type="button" role="radio" aria-checked="${s.pay==k[0]}" class="po ${s.pay==k[0]?'on':''}" onclick="sv2();S.sel.pay='${k[0]}';render()"><i class="rd">${s.pay==k[0]?'✓':''}</i>${k[1]}</button>`).join('')}</div>
 ${S.prof?'':`<label class="row2 sm" style="justify-content:flex-start;gap:10px;margin-top:12px"><input id="rm" type="checkbox" style="width:20px;height:20px" ${s.rm?'checked':''}> Запам’ятати мої дані для наступних записів</label>`}
@@ -216,20 +245,23 @@ const a=S.last,v=sv(a.svc);return `<div class="ok">✓</div><h1>Ти запис�
 ${TEST?`<button class="btn" onclick="S.mode='master';S.tab='cal';S.day=${a.o};render()">Подивитись у кабінеті майстра</button>`:''}
 <button class="back" style="margin-top:8px" onclick="S.step=1;S.sel={svc:null,day:1,time:null,name:'',phone:'',comment:'',pay:'cash'};render()">Новий запис</button>`}
 function setSvc(id){const ch=S.sel.svc!=id;S.sel.svc=id;if(ch||!okDay(S.sel.day,id)){S.sel.time=null;S.sel.day=firstOk(id)}S.cm.b=mDiff(S.sel.day)}
-function pick(id){setSvc(id);S.step=2;render()}
-function repeat(id){setSvc(id);Object.assign(S.sel,{name:S.prof.name,phone:S.prof.phone,time:null});S.step=2;render();toast('Дані підставлено — оберіть нову дату')}
-function sv2(){const q=x=>document.querySelector(x);if(!q("#nm"))return;S.sel.name=q("#nm").value;S.sel.phone=q("#ph").value;S.sel.comment=q("#cm").value;const r=q("#rm");if(r)S.sel.rm=r.checked}
-function book(){sv2();const s=S.sel,e={};if(!s.name.trim())e.n='Вкажіть ім’я';if(s.phone.replace(/\D/g,"").length<10)e.p='Вкажіть номер телефону повністю (мінімум 10 цифр)';
+/* Тривалість для самозапису: клієнтка бачить звичайну тривалість, але вільний час рахується з її додатковими хвилинами */
+function cD(id){return sv(id).d+clEx(S.sel.phone)}
+function pick(id){const s=S.sel;if(S.prof&&!s.phone)s.phone=S.prof.phone;S.be={};setSvc(id);S.step=S.prof?2:1.5;render();scrollTo(0,0)}
+function phNext(){const s=S.sel;s.phone=phFmt($('#ph0').value);if(!phOk(s.phone)){S.be={p:'Вкажіть номер телефону повністю'};render();$('#ph0').focus();return}S.be={};if(!okDay(s.day,s.svc)){s.day=firstOk(s.svc);s.time=null}else if(s.time&&!cslots(s.day,cD(s.svc)).some(x=>x.t==s.time&&x.f))s.time=null;S.cm.b=mDiff(s.day);S.step=2;render();scrollTo(0,0)}
+function repeat(id){Object.assign(S.sel,{name:S.prof.name,phone:S.prof.phone});setSvc(id);S.sel.time=null;S.step=2;render();toast('Дані підставлено — оберіть нову дату')}
+function sv2(){const q=x=>document.querySelector(x);if(!q("#nm"))return;S.sel.name=q("#nm").value;S.sel.comment=q("#cm").value;const r=q("#rm");if(r)S.sel.rm=r.checked}
+function book(){sv2();const s=S.sel,e={};if(!s.name.trim())e.n='Вкажіть ім’я';if(!phOk(s.phone))e.p='Вкажіть номер телефону повністю';
 if(Object.keys(e).length){S.be=e;render();setTimeout(()=>{const x=document.querySelector('.er');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})},50);return}S.be={};
-if(!cslots(s.day,sv(s.svc).d).some(x=>x.t==s.time&&x.f)){toast('Цей час уже зайнятий. Оберіть інший');S.step=2;render();return}
+if(!cslots(s.day,cD(s.svc)).some(x=>x.t==s.time&&x.f)){toast('Цей час уже недоступний, оберіть інший');S.sel.time=null;S.step=2;render();return}
 if(!S.prof&&$("#rm")&&$("#rm").checked)S.prof={name:s.name.trim(),phone:s.phone,email:""};
-const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};S.appts.push({...a,name:cName(s.phone,a.name)});S.last=a;S.step=4;render();scrollTo(0,0)}
+const a={id:S.id++,o:s.day,time:s.time,svc:s.svc,name:s.name.trim(),phone:s.phone,st:"new",paid:false,note:"",cm:s.comment,pay:s.pay,cat:Date.now(),client:true};const b={...a,name:cName(s.phone,a.name)};exPut(b);S.appts.push(b);S.last=a;S.step=4;render();scrollTo(0,0)}
 
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()},TT=(a,b)=>{const r=[];for(let m=a;m<=b;m+=30)r.push(m2t(m));return r};
 function cslots(o,d){return slots(o,d).map(x=>({t:x.t,f:x.f&&!(o==0&&t2m(x.t)<=nowMin())}))}
 function dHor(){const d=new Date();d.setHours(0,0,0,0);d.setMonth(d.getMonth()+3);return Math.round((d-D(0))/864e5)}
 function mDiff(o){const a=D(0),b=D(o);return(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth()}
-function okDay(o,id){return o!=null&&o>=0&&o<=dHor()&&cslots(o,sv(id).d).some(x=>x.f)}
+function okDay(o,id){return o!=null&&o>=0&&o<=dHor()&&cslots(o,cD(id)).some(x=>x.f)}
 function firstOk(id){const h=dHor();for(let o=0;o<=h;o++)if(okDay(o,id))return o;return 1}
 function dpick(ctx,sel,ok){const m=S.cm[ctx]||0,b=D(0),first=new Date(b.getFullYear(),b.getMonth()+m,1),n=new Date(b.getFullYear(),b.getMonth()+m+1,0).getDate(),f=Math.round((first-D(0))/864e5),pad=(first.getDay()+6)%7,h=dHor();let c='';for(let i=0;i<pad;i++)c+='<span></span>';
 for(let i=0;i<n;i++){const o=f+i,en=o>=0&&o<=h&&ok(o);c+=`<button type="button" class="dc ${o==sel?'on':''} ${o==0?'td':''}" ${en?'':'disabled'} aria-label="${i+1} ${MN[first.getMonth()]}${en?'':', недоступно'}" onclick="dsel('${ctx}',${o})">${i+1}</button>`}
@@ -252,13 +284,13 @@ sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-t
 <label class="f">Послуга <span class="rq">*</span></label><select id="ws" class="${bd('svc')}" onchange="S.wf.svc=this.value;okE(this,'svc')"><option value="">Оберіть послугу</option>${SV.filter(x=>!x.off).map(x=>`<option value="${x.id}" ${x.id==f.svc?'selected':''}>${esc(x.n)}</option>`).join('')}</select>${er('svc')}
 <label class="f">Бажана дата <span class="rq">*</span></label>${dpick('w',f.o,o=>!isOff(o))}<p class="sm" style="margin:6px 2px 0">${f.o!=null?'Обрано: <b>'+wd(f.o)+', '+fd(f.o)+'</b>':'Дату ще не обрано'}</p>${er('o')}
 <label class="f" id="wml">Бажаний час <span class="rq">*</span></label><div class="pay" role="radiogroup" aria-labelledby="wml">${WM.map(x=>`<button type="button" role="radio" aria-checked="${f.mode==x[0]}" class="po ${f.mode==x[0]?'on':''}" onclick="wMode('${x[0]}')"><i class="rd">${f.mode==x[0]?'✓':''}</i>${x[1]}</button>`).join('')}</div>${er('mode')}${tf}
-<div class="g2 np"><div><label class="f">Ім’я <span class="rq">*</span></label><input id="wn" class="${bd('name')}" value="${esc(f.name)}" autocomplete="name" oninput="S.wf.name=this.value;clrW(this,'name')">${er('name')}</div><div><label class="f">Телефон <span class="rq">*</span></label><input id="wp" type="tel" class="${bd('phone')}" value="${esc(f.phone)}" placeholder="+380" oninput="S.wf.phone=this.value;clrW(this,'phone')">${er('phone')}</div></div>
+<div class="g2 np"><div><label class="f">Ім’я <span class="rq">*</span></label><input id="wn" class="${bd('name')}" value="${esc(f.name)}" autocomplete="name" oninput="S.wf.name=this.value;clrW(this,'name')">${er('name')}</div><div><label class="f">Телефон <span class="rq">*</span></label><input id="wp" type="tel" class="${bd('phone')}" value="${esc(phFmt(f.phone))}" placeholder="+380" autocomplete="tel" onfocus="phFoc(this)" onblur="phBl(this);S.wf.phone=this.value" oninput="phIn(this,event);S.wf.phone=this.value;clrW(this,'phone')">${er('phone')}</div></div>
 <div class="row2" style="gap:10px;margin-top:16px"><button class="btn g" style="margin:0" onclick="closeS()">Скасувати</button><button class="btn" style="margin:0" onclick="wSend()">Надіслати заявку</button></div>`);
 if(k){const h=$('.sh');h.scrollTop=sc;h.style.animation='none'}}
 function clrW(el,k){el.classList.remove('bad');const x=el.nextElementSibling;if(x&&x.classList.contains('er'))x.remove();delete S.we[k]}
 function wSend(){const f=S.wf,e={};if(!f.svc)e.svc='Оберіть послугу';if(f.o==null||f.o<0)e.o='Оберіть дату';
 if(!f.mode)e.mode='Оберіть, коли вам зручно';else if(f.mode=='before'||f.mode=='after'){if(!f.t1)e.t1='Вкажіть час'}else if(f.mode=='between'){if(!f.t1)e.t1='Вкажіть початок';if(!f.t2)e.t2='Вкажіть кінець';if(f.t1&&f.t2&&t2m(f.t1)>=t2m(f.t2))e.t2='Кінець має бути пізніше за початок'}
-if(!f.name.trim())e.name='Вкажіть ім’я';if(f.phone.replace(/\D/g,'').length<10)e.phone='Мінімум 10 цифр';
+if(!f.name.trim())e.name='Вкажіть ім’я';if(!phOk(f.phone))e.phone='Вкажіть номер повністю';
 if(Object.keys(e).length){S.we=e;wRender(1);setTimeout(()=>{const x=document.querySelector('.sh .er');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})},60);return}
 const dp=S.wait.some(w=>pk(w.phone)==pk(f.phone)&&w.o==f.o&&w.svc==+f.svc&&w.mode==f.mode&&w.t1==(f.mode=='any'?'':f.t1)&&w.t2==(f.mode=='between'?f.t2:''));
 if(dp){toast('Така заявка вже є у списку очікування');return}
@@ -276,20 +308,22 @@ function pl(n,a,b,c){const m=n%10,h=n%100;return h>10&&h<20?c:m==1?a:m>1&&m<5?b:
 function cr(m){const d=new Date(Date.now()-m*6e4),n=new Date(),t=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),y=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);return(y<1?'Сьогодні':y==1?'Вчора':d.getDate()+' '+MN[d.getMonth()])+', '+t}
 function dl(o,t){return wd(o)+', '+fd(o)+' · '+t}
 function rqOk(r){const a=r.type=='move'?S.appts.find(x=>x.id==r.aid):null;if(r.type=='move'&&(!a||!['new','conf'].includes(a.st)))return 'gone';const d=sv(r.svc).d,s=t2m(r.t);if(r.o<0||(r.o==0&&s<=nowMin()))return 'past';if(isOff(r.o)||s<WH0||s+d>WH1)return 'busy';return busy(r.o,a?a.id:-1).some(b=>s<b[1]&&s+d>b[0])?'busy':'ok'}
-function rqCard(r){const v=sv(r.svc),mv=r.type=='move',a=mv?S.appts.find(x=>x.id==r.aid):null,c=rqOk(r);
+/* Скільки додаткових хвилин не вміщається на бажаний час запиту */
+function rqEx(r){const w=clEx(r.phone),a=r.type=='move'?S.appts.find(x=>x.id==r.aid):null;return w&&!tFree(r.o,t2m(r.t),sv(r.svc).d+w,a?a.id:-1)?w:0}
+function rqCard(r){const v=sv(r.svc),mv=r.type=='move',a=mv?S.appts.find(x=>x.id==r.aid):null,c=rqOk(r),xw=clEx(r.phone),xs=c=='ok'?rqEx(r):0;
 return `<div class="card"><div class="row2"><b>${esc(r.name)}</b><span class="chip new">Очікує підтвердження</span></div><div class="sm mu">${esc(r.phone)}</div>
 <div class="row2" style="margin-top:10px"><span class="chip done">${mv?'Перенесення':'Новий запис'}</span><span class="sm mu">${cr(r.ago)}</span></div>
 ${mv?`<div class="cmp"><div><small>Зараз</small><b>${a?dl(a.o,a.time):'—'}</b></div><span>→</span><div><small>Бажано</small><b>${dl(r.o,r.t)}</b></div></div>`:`<div class="cmp"><div><small>Запис на</small><b>${dl(r.o,r.t)}</b></div></div>`}
-<div class="row2 sm"><span>${esc(v.n)}</span><b class="price">${v.p} ₴</b></div>
+<div class="row2 sm"><span>${esc(v.n)}${xw&&c=='ok'?` · ${v.d}${xs?'':' + '+xw} хв`:''}</span><b class="price">${v.p} ₴</b></div>
 ${r.cm?`<div class="cq sm">💬 ${esc(r.cm)}</div>`:''}
-${c=='busy'?`<div class="wn">Цей час уже зайнятий. Відхиліть запит або узгодьте інший час із клієнткою.</div>`:c=='gone'?`<div class="wn">Початковий запис уже недоступний. Відхиліть запит.</div>`:c=='past'?`<div class="wn">Бажаний час уже минув. Запропонуйте інший час або відхиліть запит.</div>`:''}
+${xs?`<div class="wn">Додаткові +${xs} хв тут не вміщаються. Можна підтвердити запис без них.</div>`:''}${c=='busy'?`<div class="wn">Цей час уже зайнятий. Відхиліть запит або узгодьте інший час із клієнткою.</div>`:c=='gone'?`<div class="wn">Початковий запис уже недоступний. Відхиліть запит.</div>`:c=='past'?`<div class="wn">Бажаний час уже минув. Запропонуйте інший час або відхиліть запит.</div>`:''}
 <button class="btn" ${c=='ok'?'':'disabled'} onclick="rqAct(${r.id},1)">${mv?'Підтвердити перенесення':'Підтвердити запис'}</button><button class="btn ${c=='ok'?'g':''}" onclick="offerT(${r.id})">Запропонувати інший час</button><button class="btn g" style="color:var(--bad)" onclick="rqAct(${r.id},0)">Відхилити</button></div>`}
 /* Картка самозапису клієнтки у «Запитах»: запис уже стоїть у календарі, але чекає підтвердження */
 function apReq(a){const v=sv(a.svc),past=Date.now()>=en0(a);
 return `<div class="card"><div class="row2"><b>${esc(a.name)}</b><span class="chip new">Очікує підтвердження</span></div><div class="sm mu">${esc(a.phone)}</div>
 <div class="row2" style="margin-top:10px"><span class="chip done">Самозапис · уже в календарі</span>${a.cat?`<span class="sm mu">${cr((Date.now()-a.cat)/6e4)}</span>`:''}</div>
 <div class="cmp"><div><small>Запис на</small><b>${dl(a.o,a.time)}</b></div></div>
-<div class="row2 sm"><span>${esc(v.n)}</span><b class="price">${v.p} ₴</b></div>
+<div class="row2 sm"><span>${esc(v.n)} · ${dTx(a)}</span><b class="price">${v.p} ₴</b></div>
 ${a.cm?`<div class="cq sm">💬 ${esc(a.cm)}</div>`:''}
 ${past?`<div class="wn">Час запису минув, а запис так і не підтвердили. Відкрийте його, щоб уточнити статус.</div>`:`<button class="btn" onclick="setSt(${a.id},'conf')">Підтвердити запис</button>`}<button class="btn g" onclick="open_(${a.id})">Відкрити запис</button></div>`}
 function reqs(){const t=attn(),n=pend(),nn=t.a.length+t.rn.length,nm=t.rm.length,g=S.rqt||(nn||!nm?'new':'move');
@@ -330,11 +364,11 @@ if(!yes){r.st='rej';r.ref=1;r.dt=Date.now();closeS();render();toast('Відмо�
 const c=rqOk({...r,o:r.po,t:r.pt});if(c!='ok'){toast(c=='gone'?'Початковий запис уже недоступний':'Цей час уже недоступний');rqView(id);return}
 r.o=r.po;r.t=r.pt;rqApply(r);closeS();render();toast('Запис підтверджено на '+dl(r.o,r.t))}
 /* Застосувати підтверджену заявку: перенести запис або створити новий і запам'ятати, який саме (r.rid) */
-function rqApply(r){if(r.type=='move'){const a=S.appts.find(x=>x.id==r.aid);a.o=r.o;a.time=r.t;a.st='conf';a.seen=true;r.rid=a.id}else{const id=S.id++;S.appts.push({id,o:r.o,time:r.t,svc:r.svc,name:cName(r.phone,r.name),phone:r.phone,st:'conf',paid:false,note:'',cm:r.cm});r.rid=id}r.st='done';r.dt=Date.now()}
+function rqApply(r){if(r.type=='move'){const a=S.appts.find(x=>x.id==r.aid);a.o=r.o;a.time=r.t;a.st='conf';a.seen=true;exPut(a);r.rid=a.id}else{const id=S.id++,n={id,o:r.o,time:r.t,svc:r.svc,name:cName(r.phone,r.name),phone:r.phone,st:'conf',paid:false,note:'',cm:r.cm};exPut(n);S.appts.push(n);r.rid=id}r.st='done';r.dt=Date.now()}
 let LK=false;
 function rqAct(id,ok){if(LK)return;LK=true;try{const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;
 if(ok){const c=rqOk(r);if(c!='ok'){toast(c=='gone'?'Початковий запис уже недоступний':c=='past'?'Бажаний час уже минув':'Цей час уже зайнятий. Відхиліть запит або узгодьте інший час');render();return}
-rqApply(r);toast(r.type=='move'?'Перенесення підтверджено':'Запис підтверджено')}
+rqApply(r);const xa=S.appts.find(x=>x.id==r.rid);toast((r.type=='move'?'Перенесення підтверджено':'Запис підтверджено')+(xa&&xa.xm?` без +${xa.xm} хв`:''))}
 else{r.st='rej';r.dt=Date.now();toast('Запит відхилено')}
 render()}catch(e){toast('Не вдалося виконати дію. Спробуйте ще раз.')}finally{LK=false}}
 function svcs(){return `<div class="row2"><h1>Послуги</h1><button class="plus" aria-label="Додати послугу" onclick="svNew()">＋</button></div><p class="mu sm">Тривалість і ціна враховуються в онлайн-записі.</p>${SV.map(x=>`<div class="card"><div class="row2"><b>${esc(x.n)}</b><button class="tog ${x.off?"":"on"}" aria-label="Доступна для запису" onclick="svOff(${x.id})"></button></div>${x.desc?`<div class="sm mu" style="margin-top:4px">${esc(x.desc)}</div>`:""}<div class="row2 sm mu" style="margin-top:6px"><span>${x.d} хв${x.off?" · не показується клієнткам":""}</span><span class="price" style="color:var(--tx)">${x.p} ₴</span></div><button class="back" onclick="svEdit(${x.id})">Змінити</button></div>`).join("")}`}
@@ -345,7 +379,7 @@ function svForm(id){const x=id?sv(id):{n:"",d:60,p:"",desc:""};sheet(`<div class
 function svOff(id){const x=sv(id);x.off=!x.off;render()}
 
 function svSave(id){const n=$("#sn").value.trim(),d=+$("#sd").value,p=+$("#spr").value,t=$("#sx").value.trim();if(!n||!p||d<15){toast("Вкажіть назву, тривалість і ціну");return}if(id)Object.assign(sv(id),{n,d,p,desc:t});else SV.push({id:Math.max(...SV.map(x=>x.id))+1,n,d,p,desc:t});closeS();render();
-const k=id?S.appts.filter(a=>a.svc==id&&a.o>=0&&['new','conf'].includes(a.st)&&(m=>m+d>WH1||busy(a.o,a.id).some(b=>m<b[1]&&m+d>b[0]))(t2m(a.time))).length:0;
+const k=id?S.appts.filter(a=>a.svc==id&&a.o>=0&&['new','conf'].includes(a.st)&&(m=>{const e=m+d+(a.ex||0);return e>WH1||busy(a.o,a.id).some(b=>m<b[1]&&e>b[0])})(t2m(a.time))).length:0;
 toast(k?`Збережено. Перевірте календар: ${k} ${pl(k,'запис тепер накладається','записи тепер накладаються','записів тепер накладаються')} на інші або виходять за робочі години`:id?"Збережено":"Послугу додано")}
 const MNN=["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
 function rng(){const d=D(S.day);if(S.view=="week"){const s=S.day-((d.getDay()+6)%7);return[s,s+6]}if(S.view=="month"){const s=S.day-d.getDate()+1;return[s,s+new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-1]}return[S.day,S.day]}
@@ -383,29 +417,31 @@ if(id)Object.assign(S.offs.find(y=>y.id==id),o);else S.offs.push({id:S.oid++,...
 const c=S.appts.filter(q=>q.st!='canc'&&q.o>=0&&(o.t=='w'?D(q.o).getDay()==o.dow:q.o>=o.a&&q.o<=o.b)).length;offs();render();toast(c?'Збережено. У ці дні вже є записи: '+c:'Збережено')}
 function offDel(id){const x=S.offs.find(y=>y.id==id);if(!x)return;sheet(`<h2 style="margin-top:0">Видалити вихідні?</h2><p class="mu" style="margin:0">${offLbl(x)}${x.n?' · '+esc(x.n):''}</p><p class="sm">У ці дні клієнтки знову бачитимуть вільний час.</p><button class="btn" style="background:var(--bad);box-shadow:none" onclick="offDelY(${id})">Так, видалити</button><button class="btn g" onclick="offs()">Назад</button>`)}
 function offDelY(id){S.offs=S.offs.filter(y=>y.id!=id);offs();render();toast('Вихідні видалено')}
-function tFill(p,d,ign,only,io,it){const ds=$('#'+p+'o'),ts=$('#'+p+'t');
+function tFill(p,d,ign,only,io,it,ex){const ds=$('#'+p+'o'),ts=$('#'+p+'t');
 if(!only){ds.innerHTML=[...Array(dHor()+1)].map((_,o)=>{const sl=slots(o,d,ign),off=isOff(o),bad=off||!sl.some(x=>x.f);return `<option value="${o}" ${bad?'disabled style="color:#a9a3b8"':''}>${wd(o)}, ${fd(o)}${off?' · вихідний':bad?' · зайнято':''}</option>`}).join('');ds.value=io;if(!ds.selectedOptions[0]||ds.selectedOptions[0].disabled){const f=[...ds.options].find(x=>!x.disabled);if(f)ds.value=f.value}}
-const sl=slots(+ds.value,d,ign),cur=only?ts.value:it;ts.innerHTML=sl.map(x=>`<option value="${x.t}" ${x.f?'':'disabled style="color:#a9a3b8"'}>${x.t}${x.f?'':' · зайнято'}</option>`).join('');ts.value=cur;if(!ts.value||!ts.selectedOptions[0]||ts.selectedOptions[0].disabled){const f=sl.find(x=>x.f);if(f)ts.value=f.t}}
+tPut(ts,slots(+ds.value,d,ign,ex),ex,only?ts.value:it)}
 function edLk(a){return a.st=='done'||a.o<0}/* завершений або минулий візит: дату й час не змінюємо */
 function editA(id){const a=S.appts.find(x=>x.id==id),lk=edLk(a);sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Редагувати запис</h2><p class="mu sm" style="margin:0">Наприклад, змінити послугу за проханням клієнтки</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div>
 <div class="g2 np"><div><label class="f">Ім’я</label><input id="en" value="${esc(a.name)}"></div><div><label class="f">Телефон</label><input id="ep" type="tel" value="${esc(a.phone)}"></div></div>
 <label class="f">Послуга</label><select id="es" ${lk?'':`onchange="eChg(${id},0)"`}>${SV.map(v=>`<option value="${v.id}" ${v.id==a.svc?'selected':''}>${esc(v.n)} · ${v.p} ₴</option>`).join('')}</select>
-${lk?`<div class="card sm" style="margin-top:12px">Дата візиту: <b>${dl(a.o,a.time)}</b><div class="mu">Дату й час ${a.st=='done'?'завершеного':'минулого'} візиту не змінюємо — це історія.</div></div>`:`<div class="g2 dt"><div><label class="f">Дата</label><select id="eo" onchange="eChg(${id},1)"></select></div><div><label class="f">Година</label><select id="et"></select></div></div>
-<p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p>`}
+${lk?`<div class="card sm" style="margin-top:12px">Дата візиту: <b>${dl(a.o,a.time)}</b><div class="mu">Дату й час ${a.st=='done'?'завершеного':'минулого'} візиту не змінюємо — це історія.</div></div>`:`<div class="g2 dt"><div><label class="f">Дата</label><select id="eo" onchange="eChg(${id},1)"></select></div><div><label class="f">Година</label><select id="et" onchange="eXf()"></select></div></div>
+<p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p>${clEx(a.phone)?`<label class="row2 exl"><span>Додатковий час +${clEx(a.phone)} хв</span><input id="eex" type="checkbox" ${a.xm?'':'checked'}></label>`:''}`}
 <label class="f">Коментар клієнтки</label><textarea id="ec">${esc(a.cm||'')}</textarea>
-<div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="open_(${id})">Скасувати</button><button class="btn" style="margin:0" onclick="eSave(${id})">Зберегти</button></div>`);if(!lk)tFill('e',sv(a.svc).d,id,0,a.o,a.time)}
-function eChg(id,only){tFill('e',sv(+$('#es').value).d,id,only,+$('#eo').value,$('#et').value)}
-function eSave(id){const a=S.appts.find(x=>x.id==id),lk=edLk(a),n=$('#en').value.trim(),sid=+$('#es').value,o=lk?a.o:+$('#eo').value,t=lk?a.time:$('#et').value;if(!n||!t){toast('Вкажіть ім’я й вільний час');return}const d=sv(sid).d,m=t2m(t);if(!lk&&(isOff(o)||m<WH0||m+d>WH1||busy(o,id).some(b=>m<b[1]&&m+d>b[0]))){toast('Цей час недоступний');return}const ph=$('#ep').value.trim();if(ph.replace(/\D/g,'').length<10){toast('Вкажіть номер телефону повністю (мінімум 10 цифр)');return}let nm=n;if(pk(ph)==pk(a.phone)){if(n!=a.name)clRn(pk(ph),n)}else nm=cName(ph,n);Object.assign(a,{seen:true,name:nm,phone:ph,svc:sid,o,time:t,cm:$('#ec').value.trim()});S.day=o;closeS();render();toast('Запис оновлено')}
-function offerT(id){const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Інший час</h2><p class="mu sm" style="margin:0">${esc(r.name)} · ${esc(sv(r.svc).n)}</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div><p class="sm mu" style="margin:8px 0 0">Бажаний час клієнтки: ${dl(r.o,r.t)}</p><div class="g2 dt"><div><label class="f">Дата</label><select id="fo" onchange="tFill('f',sv(${r.svc}).d,${r.aid||-1},1)"></select></div><div><label class="f">Година</label><select id="ft"></select></div></div><label class="f">Повідомлення клієнтці (за бажанням)</label><textarea id="fm" placeholder="Наприклад, цей час зайнятий, чи підійде інший?"></textarea><div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="closeS()">Скасувати</button><button class="btn" style="margin:0" onclick="offerSend(${id})">Надіслати</button></div>`);tFill('f',sv(r.svc).d,r.aid||-1,0,r.o,r.t)}
+<div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="open_(${id})">Скасувати</button><button class="btn" style="margin:0" onclick="eSave(${id})">Зберегти</button></div>`);if(!lk){tFill('e',sv(a.svc).d,id,0,a.o,a.time,clEx(a.phone));eXf()}}
+function eChg(id,only){tFill('e',sv(+$('#es').value).d,id,only,+$('#eo').value,$('#et').value,clEx($('#ep').value));eXf()}
+/* Якщо на обраний час додаткові хвилини не вміщаються, галочка вимикається */
+function eXf(){const c=$('#eex'),o=$('#et').selectedOptions[0];if(!c||!o)return;const x=o.dataset.x=='1';if(c.disabled&&!x)c.checked=true;c.disabled=x;if(x)c.checked=false}
+function eSave(id){const a=S.appts.find(x=>x.id==id),lk=edLk(a),n=$('#en').value.trim(),sid=+$('#es').value,o=lk?a.o:+$('#eo').value,t=lk?a.time:$('#et').value;if(!n||!t){toast('Вкажіть ім’я й вільний час');return}const d=sv(sid).d,m=t2m(t);if(!lk&&(isOff(o)||m<WH0||m+d>WH1||busy(o,id).some(b=>m<b[1]&&m+d>b[0]))){toast('Цей час недоступний');return}const ph=$('#ep').value.trim();if(ph.replace(/\D/g,'').length<10){toast('Вкажіть номер телефону повністю (мінімум 10 цифр)');return}let nm=n;if(pk(ph)==pk(a.phone)){if(n!=a.name)clRn(pk(ph),n)}else nm=cName(ph,n);const sm=pk(ph)==pk(a.phone),xb=$('#eex'),xo=sm&&xb&&!xb.checked&&!xb.disabled;Object.assign(a,{seen:true,name:nm,phone:ph,svc:sid,o,time:t,cm:$('#ec').value.trim()});if(!lk)exPut(a,xo);S.day=o;closeS();render();toast(a.xm&&!xo&&!lk?`Запис оновлено без +${a.xm} хв`:'Запис оновлено')}
+function offerT(id){const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;sheet(`<div class="row2" style="align-items:flex-start"><div><h2 style="margin-top:0">Інший час</h2><p class="mu sm" style="margin:0">${esc(r.name)} · ${esc(sv(r.svc).n)}</p></div><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div><p class="sm mu" style="margin:8px 0 0">Бажаний час клієнтки: ${dl(r.o,r.t)}</p><div class="g2 dt"><div><label class="f">Дата</label><select id="fo" onchange="tFill('f',sv(${r.svc}).d,${r.aid||-1},1,undefined,undefined,${clEx(r.phone)})"></select></div><div><label class="f">Година</label><select id="ft"></select></div></div><label class="f">Повідомлення клієнтці (за бажанням)</label><textarea id="fm" placeholder="Наприклад, цей час зайнятий, чи підійде інший?"></textarea><div class="row2" style="gap:10px;margin-top:14px"><button class="btn g" style="margin:0" onclick="closeS()">Скасувати</button><button class="btn" style="margin:0" onclick="offerSend(${id})">Надіслати</button></div>`);tFill('f',sv(r.svc).d,r.aid||-1,0,r.o,r.t,clEx(r.phone))}
 function offerSend(id){const r=S.reqs.find(x=>x.id==id);if(!r||r.st!='pending')return;const o=+$('#fo').value,t=$('#ft').value;if(!t){toast('Оберіть вільний час');return}r.st='offer';r.po=o;r.pt=t;r.pm=$('#fm').value.trim();r.dt=Date.now();closeS();render();toast('Пропозицію надіслано клієнтці (демо)')}
 function clientNav(){return `<nav class="nav"><div>${[['book','Записатись','<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18M12 13v4m-2-2h4"/>'],['prof','Профіль','<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>']].map(x=>`<button class="${S.ct==x[0]?'on':''}" onclick="S.ct='${x[0]}';render()"><svg viewBox="0 0 24 24">${x[2]}</svg>${x[1]}</button>`).join('')}</div></nav>`}
 function hist(){if(!S.prof)return[];const k=pk(S.prof.phone);return S.appts.filter(a=>a.svc&&a.phone&&pk(a.phone)==k&&a.st!='canc').sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time))}
 function rep(){const h=hist().filter(a=>a.st=='done');if(!h.length)return'';const a=h[0];return `<div class="card" style="background:var(--ac2)"><b>Повторити останню послугу?</b><div class="sm mu">${esc(sv(a.svc).n)}</div><button class="btn row" style="margin-top:10px" onclick="repeat(${a.svc})">Повторити запис</button></div>`}
 function profV(){const p=S.prof,h=hist();
 return `<h1>Профіль</h1><p class="mu">Необов’язково: запис без профілю працює так само. Збережіть дані, щоб не вводити їх щоразу.</p>
-<div class="card"><div class="g2 np"><div><label class="f" style="margin-top:0">Ім’я *</label><input id="pn" value="${esc(p?p.name:'')}" autocomplete="name"></div><div><label class="f" style="margin-top:0">Телефон *</label><input id="pp" type="tel" value="${esc(p?p.phone:'')}" placeholder="+380"></div></div><label class="f">Email (за бажанням)</label><input id="pe" type="email" value="${esc(p&&p.email||'')}" autocomplete="email"><button class="btn" onclick="profSave()">${p?'Зберегти зміни':'Зберегти мої дані'}</button>${p?'<button class="back" style="margin-top:6px" onclick="profDel()">Видалити мої дані</button>':'<button class="back" style="margin-top:6px" onclick="profDemo()">Підставити демо-дані</button>'}</div>
+<div class="card"><div class="g2 np"><div><label class="f" style="margin-top:0">Ім’я *</label><input id="pn" value="${esc(p?p.name:'')}" autocomplete="name"></div><div><label class="f" style="margin-top:0">Телефон *</label><input id="pp" type="tel" value="${esc(phFmt(p?p.phone:''))}" placeholder="+380" autocomplete="tel" onfocus="phFoc(this)" onblur="phBl(this)" oninput="phIn(this,event)"></div></div><label class="f">Email (за бажанням)</label><input id="pe" type="email" value="${esc(p&&p.email||'')}" autocomplete="email"><button class="btn" onclick="profSave()">${p?'Зберегти зміни':'Зберегти мої дані'}</button>${p?'<button class="back" style="margin-top:6px" onclick="profDel()">Видалити мої дані</button>':'<button class="back" style="margin-top:6px" onclick="profDemo()">Підставити демо-дані</button>'}</div>
 <h2 style="margin-top:18px">Історія візитів</h2>${!p?'<div class="brk">Збережіть дані, і тут з’явиться історія ваших записів.</div>':h.length?h.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+' дн. тому':dl(a.o,a.time)} · ${sv(a.svc).p} ₴</span></span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join(''):'<div class="brk">Історія з’явиться після першого візиту.</div>'}`}
-function profSave(){const n=$('#pn').value.trim(),ph=$('#pp').value.trim();if(!n||ph.replace(/\D/g,'').length<10){toast('Вкажіть ім’я та телефон повністю');return}S.prof={name:n,phone:ph,email:$('#pe').value.trim()};render();toast('Дані збережено')}
+function profSave(){const n=$('#pn').value.trim(),ph=phFmt($('#pp').value);if(!n||!phOk(ph)){toast('Вкажіть ім’я та телефон повністю');return}S.prof={name:n,phone:ph,email:$('#pe').value.trim()};render();toast('Дані збережено')}
 function profDel(){S.prof=null;render();toast('Дані видалено')}
 function profDemo(){S.prof={name:'Олена Коваль',phone:'+380 67 111 22 33',email:''};render()}
 /* Дати зберігаються як зсув від «сьогодні». Опівночі «сьогодні» змінюється, тому всі зсуви
@@ -422,8 +458,8 @@ if(off)h+=`<div class="brk" style="margin-top:12px">Вихідний за гра
 l.forEach(a=>{h+=ap(a)});
 if(!l.length&&!off)h+=`<div class="brk" style="margin-top:12px">Записів немає. Натисніть «+», щоб додати.</div>`;
 return h}
-function ap(a){const v=a.svc?sv(a.svc):null,x=["canc","noshow"].includes(a.st);return `<button class="card ap ${x?"x":""}" onclick="open_(${a.id})"><div class="t">${a.time}<small>${v?v.d+" хв":(a.dur||30)+" хв"}</small></div><div class="b"><div><b>${isNew(a)?'<i class="nd"></i>':''}${a.st=="block"?"Зайнято":esc(a.name)}</b><span class="chip ${a.st}">${ST[a.st]}</span></div><div class="sm mu"><span>${v?esc(v.n):esc(a.name)}</span>${a.paid?'<span style="color:var(--ok)">● оплачено</span>':""}</div>${a.cm?`<div class="sm" style="margin-top:4px">💬 ${esc(a.cm)}</div>`:""}</div></button>`}
-const st0=a=>D(a.o).getTime()+t2m(a.time)*6e4,en0=a=>st0(a)+(a.svc?sv(a.svc).d:30)*6e4,hm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+function ap(a){const v=a.svc?sv(a.svc):null,x=["canc","noshow"].includes(a.st);return `<button class="card ap ${x?"x":""}" onclick="open_(${a.id})"><div class="t">${a.time}<small>${v?v.d+(a.ex?' + '+a.ex:'')+" хв":(a.dur||30)+" хв"}</small></div><div class="b"><div><b>${isNew(a)?'<i class="nd"></i>':''}${a.st=="block"?"Зайнято":esc(a.name)}</b><span class="chip ${a.st}">${ST[a.st]}</span></div><div class="sm mu"><span>${v?esc(v.n)+(a.xm?' · без +'+a.xm+' хв':''):esc(a.name)}</span>${a.paid?'<span style="color:var(--ok)">● оплачено</span>':""}</div>${a.cm?`<div class="sm" style="margin-top:4px">💬 ${esc(a.cm)}</div>`:""}</div></button>`}
+const st0=a=>D(a.o).getTime()+t2m(a.time)*6e4,en0=a=>st0(a)+apD(a)*6e4,hm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 function edMv(id){return `<button class="btn g" style="margin:0" onclick="editA(${id})">Редагувати</button><button class="btn g" style="margin:0" onclick="moveS(${id})">Перенести</button>`}
 function open_(id){const a=S.appts.find(x=>x.id==id),v=a.svc?sv(a.svc):null;
 if(a.st=="block")return sheet(`<h2>Блок часу</h2><p>${wd(a.o)}, ${fd(a.o)} о ${a.time}</p><button class="btn g" onclick="del(${id})">Зняти блок</button>`);
@@ -436,7 +472,7 @@ else if(s=='done')act=`${a.auto?`<p class="sm mu" style="margin:0 2px 10px;text-
 else if(s=='noshow')act=`<button class="btn g" onclick="askSt(${id},'done')">Клієнтка все ж була — позначити завершеним</button>`;
 else if(s=='canc')act=`<button class="btn g" onclick="askSt(${id},'restore')">Відновити запис</button>`;
 sheet(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">${esc(a.name)}</h2><div class="row2" style="gap:8px"><span class="chip ${a.st}">${ST[a.st]}</span><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div></div><p class="mu" style="margin:0">${esc(a.phone)}</p>
-<div class="card"><b>${esc(v.n)}</b><div class="sm mu">${wd(a.o)}, ${fd(a.o)} о ${a.time} · ${v.d} хв · ${v.p} ₴</div>${a.cm?`<div class="sm" style="margin-top:6px">💬 ${esc(a.cm)}</div>`:""}</div>
+<div class="card"><b>${esc(v.n)}</b><div class="sm mu">${wd(a.o)}, ${fd(a.o)} о ${a.time} · ${dTx(a)} · ${v.p} ₴</div>${a.cm?`<div class="sm" style="margin-top:6px">💬 ${esc(a.cm)}</div>`:""}</div>
 ${msg?`<div class="cq sm">${msg}</div>`:''}
 ${dead?'':`<div class="row2"><span>Оплачено</span><button class="tog ${a.paid?"on":""}" aria-label="Оплата" onclick="S.appts.find(x=>x.id==${id}).paid=!${a.paid};S.appts.find(x=>x.id==${id}).seen=true;open_(${id});render()"></button></div>`}
 <label class="f">Моя нотатка</label><textarea onchange="S.appts.find(x=>x.id==${id}).note=this.value">${esc(a.note)}</textarea>
@@ -451,10 +487,10 @@ function autoDone(){const n=Date.now();let k=0;S.appts.forEach(a=>{if(a.st=='con
 function setSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}
 const from=a.st,to=s=='restore'?(a.prev||'conf'):s;
 if((from=='canc'||from=='noshow')&&to!='canc'&&to!='noshow'){const m=t2m(a.time),d=sv(a.svc).d;if(busy(a.o,a.id).some(b=>m<b[1]&&m+d>b[0])){toast('Цей час уже зайнятий іншим записом. Створіть новий запис на вільний час');open_(id);return}}
-if(to=='canc')a.prev=from;a.st=to;a.seen=true;if(from=='new')a.dec={r:to,t:Date.now()};if(to=='new')delete a.dec;if(to=='done'){a.paid=true;delete a.auto}if(to=='noshow')a.paid=false;
+if(to=='canc')a.prev=from;a.st=to;a.seen=true;if(from=='canc')exPut(a);if(from=='new')a.dec={r:to,t:Date.now()};if(to=='new')delete a.dec;if(to=='done'){a.paid=true;delete a.auto}if(to=='noshow')a.paid=false;
 closeS();render();
 if(to=='canc'&&from!='new')offer(a);
-else if(to=='noshow'&&from=='conf'&&a.o==0&&Date.now()<en0(a)){const st=Math.max(t2m(a.time),Math.ceil(nowMin()/10)*10),en=t2m(a.time)+sv(a.svc).d;if(en-st>=30)offer({...a,time:m2t(st)},'Неявку позначено');else toast(ST.noshow)}
+else if(to=='noshow'&&from=='conf'&&a.o==0&&Date.now()<en0(a)){const st=Math.max(t2m(a.time),Math.ceil(nowMin()/10)*10),en=t2m(a.time)+apD(a);if(en-st>=30)offer({...a,time:m2t(st)},'Неявку позначено');else toast(ST.noshow)}
 else toast(s=='restore'?'Запис відновлено':to=='canc'&&from=='new'?'Запис відхилено':ST[to])}
 function askSt(id,s){const a=S.appts.find(x=>x.id==id);if(!a||!stOk(a,s)){toast('Ця дія недоступна для поточного статусу');return}const rj=s=='canc'&&a.st=='new',early=s=='noshow'&&a.st=='conf'&&Date.now()<en0(a);
 const m=s=='noshow'?(a.st=='done'?['Клієнтка не прийшла?','Візит буде позначено як неявку замість завершеного, позначку оплати буде знято.','Так, не прийшла']:['Клієнтка не прийшла?','Запис буде позначено як неявку. Це не завершений візит.'+(early?' Решта часу до '+hm(en0(a))+' звільниться в календарі.':''),'Так, не прийшла'])
@@ -471,38 +507,39 @@ function del(id){S.appts=S.appts.filter(a=>a.id!=id);closeS();render()}
 function moveS(id){const a=S.appts.find(x=>x.id==id);sheet(`<h2>Перенести запис</h2><p class="mu sm" style="margin:0">${esc(a.name)} · ${esc(sv(a.svc).n)}</p><div class="g2 dt"><div><label class="f">Дата</label><select id="mo" onchange="mFill(${id},1)"></select></div><div><label class="f">Година</label><select id="mt"></select></div></div><p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p><button class="btn" onclick="doMove(${id})">Зберегти</button>`);mFill(id,0,a.o,a.time)}
 function mFill(id,only,io,it){const a=S.appts.find(x=>x.id==id),d=sv(a.svc).d,ds=$("#mo"),ts=$("#mt");
 if(!only){ds.innerHTML=[...Array(dHor()+1)].map((_,o)=>{const sl=slots(o,d,id),off=isOff(o),bad=off||!sl.some(x=>x.f);return `<option value="${o}" ${bad?'disabled style="color:#a9a3b8"':""}>${wd(o)}, ${fd(o)}${off?" · вихідний":bad?" · зайнято":""}</option>`}).join("");ds.value=io;if(!ds.selectedOptions[0]||ds.selectedOptions[0].disabled){const f=[...ds.options].find(x=>!x.disabled);if(f)ds.value=f.value}}
-const sl=slots(+ds.value,d,id),cur=only?ts.value:it;ts.innerHTML=sl.map(x=>`<option value="${x.t}" ${x.f?"":'disabled style="color:#a9a3b8"'}>${x.t}${x.f?"":" · зайнято"}</option>`).join("");ts.value=cur;if(!ts.value||!ts.selectedOptions[0]||ts.selectedOptions[0].disabled){const f=sl.find(x=>x.f);if(f)ts.value=f.t}}
+const ex=clEx(a.phone);tPut(ts,slots(+ds.value,d,id,ex),ex,only?ts.value:it)}
 function doMove(id){const a=S.appts.find(x=>x.id==id),o=+$("#mo").value,t=$("#mt").value;if(!t){toast("У цей день немає вільного часу");return}const d=sv(a.svc).d,s=t2m(t);
 const bad=busy(o,id).some(b=>s<b[1]&&s+d>b[0])||s<WH0||s+d>WH1;if(bad){toast("Цей час недоступний: він зайнятий або поза робочими годинами");return}
-a.o=o;a.time=t;a.seen=true;closeS();S.day=o;render();toast("Запис перенесено")}
+a.o=o;a.time=t;a.seen=true;exPut(a);closeS();S.day=o;render();toast(a.xm?`Запис перенесено без +${a.xm} хв`:"Запис перенесено")}
 function offer(a,lb){const c=S.wait.slice().sort((x,y)=>wfit(y,a)-wfit(x,a));if(!c.length){toast((lb||"Скасовано")+". Список очікування порожній");return}
 sheet(`<h2>Звільнилось вікно ${a.time}</h2><p class="mu sm">${wd(a.o)}, ${fd(a.o)}. Оберіть, кому запропонувати — повідомлення піде лише вибраним.</p>${c.map(w=>`<label class="card row2" style="cursor:pointer"><span><b>${esc(w.name)}</b>${wfit(w,a)?' <span class="chip conf">Підходить</span>':''}<br><span class="sm mu">${esc(sv(w.svc).n)}</span><br><span class="sm mu">Бажано: ${wd(w.o)}, ${fd(w.o)} · ${wcond(w)}</span></span><input type="checkbox" class="wc" style="width:22px;height:22px" ${wfit(w,a)?"checked":""}></label>`).join("")}
 <button class="btn" onclick="sendOffer()">Запропонувати вибраним</button><button class="btn g" onclick="closeS()">Не пропонувати</button>`)}
 function sendOffer(){const n=[...document.querySelectorAll(".wc")].filter(x=>x.checked).length;closeS();toast(n?`Пропозицію надіслано: ${n} (демо)`:"Нікого не вибрано")}
 function quick(){sheet(`<h2>Новий запис</h2>
-<div class="g2 np" id="qnp"><div><label class="f">Ім’я <span class="rq">*</span></label><input id="qn" placeholder="Ім’я клієнтки" autofocus oninput="clrE(this,'q')"></div><div><label class="f">Телефон <span class="rq">*</span></label><input id="qp" type="tel" placeholder="+380" autocomplete="off" oninput="clrE(this,'q')"></div></div>
+<div class="g2 np" id="qnp"><div><label class="f">Ім’я <span class="rq">*</span></label><input id="qn" placeholder="Ім’я клієнтки" autofocus oninput="clrE(this,'q')"></div><div><label class="f">Телефон <span class="rq">*</span></label><input id="qp" type="tel" placeholder="+380" autocomplete="off" oninput="clrE(this,'q');qFill(1)"></div></div>
 <label class="f">Послуга (можна пізніше)</label><select id="qs" onchange="qFill()">${SV.map(s=>`<option value="${s.id}">${esc(s.n)}</option>`).join("")}<option value="0">Заблокувати час (30 хв)</option></select>
 <div class="g2 dt"><div><label class="f">Дата</label><select id="qd" onchange="qFill(1)"></select></div><div><label class="f">Година</label><select id="qt"></select></div></div>
-<p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p>
+<p class="sm mu" style="margin:6px 2px 0">Сірим позначено вихідні й зайнятий час.</p><p id="qxh" class="sm exh" hidden></p>
 <label class="f">Нотатки для себе</label><textarea id="qm" placeholder="Наприклад, дизайн або побажання"></textarea>
 <button class="btn" onclick="addQ()">Додати</button>`);qFill(0,S.day)}
 function qFill(only,init){const sid=+$("#qs").value,d=sid?sv(sid).d:30,ds=$("#qd");$("#qnp").style.display=sid?"":"none";
 if(!only){const cur=init!=null?init:+ds.value;ds.innerHTML=[...Array(dHor()+1)].map((_,o)=>{const sl=slots(o,d),off=isOff(o),bad=off||!sl.some(x=>x.f);return `<option value="${o}" ${bad?'disabled style="color:#a9a3b8"':""}>${wd(o)}, ${fd(o)}${off?" · вихідний":bad?" · зайнято":""}</option>`}).join("");ds.value=cur;if(!ds.selectedOptions[0]||ds.selectedOptions[0].disabled){const f=[...ds.options].find(x=>!x.disabled);if(f)ds.value=f.value}}
-const sl=slots(+ds.value,d),ts=$("#qt"),cur=ts.value;ts.innerHTML=sl.map(x=>`<option value="${x.t}" ${x.f?"":'disabled style="color:#a9a3b8"'}>${x.t}${x.f?"":" · зайнято"}</option>`).join("");ts.value=cur;if(!ts.value||!ts.selectedOptions[0]||ts.selectedOptions[0].disabled){const f=sl.find(x=>x.f);if(f)ts.value=f.t}}
+const ex=sid?clEx($("#qp").value):0,ts=$("#qt"),h=$("#qxh");tPut(ts,slots(+ds.value,d,undefined,ex),ex,ts.value);h.hidden=!ex;h.textContent=ex?`Для цієї клієнтки додається +${ex} хв`:''}
 function qChk(n){let ok=true;[['#qn',!n&&'Вкажіть ім’я'],['#qp',$('#qp').value.replace(/\D/g,'').length<10&&'Вкажіть номер телефону повністю (мінімум 10 цифр)']].forEach(([id,m])=>{const el=$(id),x=el.nextElementSibling;if(x&&x.classList.contains('er'))x.remove();el.classList.toggle('bad',!!m);if(m){el.insertAdjacentHTML('afterend',`<div class="er">${m}</div>`);ok=false}});return ok}
 function addQ(){const n=$("#qn").value.trim(),o=+$("#qd").value,t=$("#qt").value,s=+$("#qs").value;if(s&&!qChk(n))return;if(!t){toast("У цей день немає вільного часу");return}
 const d=s?sv(s).d:30,m=t2m(t);if(busy(o).some(b=>m<b[1]&&m+d>b[0])||m<WH0||m+d>WH1){toast("Цей час недоступний");return}
-S.appts.push({id:S.id++,o,time:t,svc:s||null,dur:30,name:s?cName($("#qp").value,n):"Блок",phone:s?$("#qp").value.trim():"",st:s?"conf":"block",paid:false,note:s?$("#qm").value.trim():""});closeS();S.day=o;render();toast(s?"Запис додано":"Час заблоковано")}
+const b={id:S.id++,o,time:t,svc:s||null,dur:30,name:s?cName($("#qp").value,n):"Блок",phone:s?$("#qp").value.trim():"",st:s?"conf":"block",paid:false,note:s?$("#qm").value.trim():""};if(s)exPut(b);S.appts.push(b);closeS();S.day=o;render();toast(s?(b.xm?`Запис додано без +${b.xm} хв`:"Запис додано"):"Час заблоковано")}
 /* ---------- КЛІЄНТКИ ---------- */
 /* Дані клієнтки живуть у S.cl за ключем pk(телефон): порядок появи n, дата at, колір c, коротка замітка sn,
    коментарі cms та ім'я name (заповнюється, лише коли майстриня змінила його в картці). */
+const XT=[0,10,15,20,30,45,60];
 const CC=[['#f2528a','Рожевий'],['#9b86ec','Бузковий'],['#2b1b6b','Індиго'],['#d18a14','Бурштиновий'],['#2fa37f','М’ятний']];
 S.cl={};S.cln=1;S.cmid=1;S.cs='new';
 /* S.clx: видалені клієнтки, ключ pk(телефон), значення — S.id на момент видалення.
    Клієнтка повертається, коли з'являється новий запис (id не менший за позначку) або старий знову стає активним. */
 S.clx={};
 const clAct=a=>['new','conf'].includes(a.st);
-function syncCl(){S.appts.forEach(a=>{const k=a.svc&&pk(a.phone);if(!k)return;if(k in S.clx){if(a.id<S.clx[k]&&!clAct(a))return;delete S.clx[k]}if(!S.cl[k])S.cl[k]={n:S.cln++,at:a.cat||Date.now(),c:0,sn:'',cms:[],name:''}})}
+function syncCl(){S.appts.forEach(a=>{const k=a.svc&&pk(a.phone);if(!k)return;if(k in S.clx){if(a.id<S.clx[k]&&!clAct(a))return;delete S.clx[k]}if(!S.cl[k])S.cl[k]={n:S.cln++,at:a.cat||Date.now(),c:0,sn:'',cms:[],name:'',ex:0}})}
 /* Ім'я з картки має перевагу над тим, що клієнтка ввела сама */
 function cName(ph,typed){const c=S.cl[pk(ph)];return c&&c.name||typed}
 function clRn(k,n){if(S.cl[k])S.cl[k].name=n;[S.appts,S.reqs,S.wait].forEach(l=>l.forEach(x=>{if(pk(x.phone)==k)x.name=n}))}
@@ -513,16 +550,17 @@ function clients(){const all=Object.values(cliMap()),q=S.q.toLowerCase().trim(),
 return `<h1>Клієнтки</h1><input id="q" placeholder="Пошук за ім’ям, телефоном або заміткою" value="${esc(S.q)}" oninput="S.q=this.value;const p=this.selectionStart;render();const e=$('#q');e.focus();e.setSelectionRange(p,p)">
 ${all.length?`<div class="seg cso" role="group" aria-label="Сортування клієнток">${[['new','Нові'],['az','А–Я'],['vis','Візити']].map(x=>`<button class="${S.cs==x[0]?'on':''}" aria-pressed="${S.cs==x[0]}" onclick="S.cs='${x[0]}';render()">${x[1]}</button>`).join('')}</div>`:''}
 ${clSort(l).map(c=>{const n=c.v.filter(a=>a.st=="done").length,sn=c.cl.sn.trim();return `<button class="card ap" onclick="cli('${c.k}')"><div class="b" style="border-left-color:${CC[c.cl.c][0]}"><div class="cr1"><b>${esc(c.name)}</b>${sn?`<span class="sn">${esc(sn)}</span>`:''}</div><div class="sm mu"><span>${esc(c.phone)}</span><span class="nw">${n} ${pl(n,'візит','візити','візитів')}</span></div></div></button>`}).join("")||`<div class="brk" style="margin-top:12px">${all.length?'Нікого не знайдено. Спробуйте частину номера.':'Клієнток поки немає. Вони з’являться після першого запису.'}</div>`}`}
-function cli(k,still){const c=cliMap()[k];if(!c)return;const old=$('#ov .sh'),sc=still&&old?old.scrollTop:0,v=c.v.slice().sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time)),n=c.cl.cms.length,sn=c.cl.sn;
+function cli(k,still){const c=cliMap()[k];if(!c)return;const old=$('#ov .sh'),sc=still&&old?old.scrollTop:0,v=c.v.slice().sort((a,b)=>b.o-a.o||t2m(b.time)-t2m(a.time)),n=c.cl.cms.length,sn=c.cl.sn,xe=c.cl.ex||0;
 sheet(`<div class="row2"><span class="sm mu">Картка клієнтки</span><button class="xb" aria-label="Закрити" onclick="closeS()">✕</button></div>
 <div class="cld"><div class="clm" style="border-left-color:${CC[c.cl.c][0]}"><div class="cln"><h2>${esc(c.name)}</h2><button class="ib" aria-label="Змінити ім’я та колір" onclick="clEd('${k}')">${IC.ed}</button></div><p class="mu sm">${esc(c.phone)}</p></div>
 <div class="cls"><textarea id="csn" rows="3" maxlength="40" aria-label="Коротка замітка, до 40 символів" placeholder="Коротко: що важливо пам’ятати" oninput="snIn('${k}',this)" onblur="snOut('${k}',this)" onkeydown="if(event.key=='Enter'){event.preventDefault();this.blur()}">${esc(sn)}</textarea><small><span>Коротка замітка</span><span id="csc">${sn.length}/40</span></small></div></div>
 <button class="btn g" onclick="cmOpen('${k}')">${n?'Відкрити коментарі · '+n:'Додати коментар'}</button>
+<label class="f" id="cxl">Додатковий час</label><div class="xts" role="radiogroup" aria-labelledby="cxl">${XT.map(x=>`<button type="button" role="radio" aria-checked="${x==xe}" class="xo ${x==xe?'on':''}" onclick="clExS('${k}',${x})">${x?'+'+x:'Без'}</button>`).join('')}</div><p class="sm mu" style="margin:6px 2px 0">Додається до записів цієї клієнтки. Клієнтка цього не бачить.</p>
 <label class="f">Історія візитів</label>${v.map(a=>`<div class="card row2"><span><b>${esc(sv(a.svc).n)}</b><br><span class="sm mu">${a.o<0?-a.o+" дн. тому":wd(a.o)+", "+fd(a.o)} · ${a.time}</span>${a.note?`<br><span class="sm">📝 ${esc(a.note)}</span>`:''}</span><span class="chip ${a.st}">${ST[a.st]}</span></div>`).join("")}<button class="btn" onclick="cliNew('${k}')">Створити запис</button><button class="cdel" onclick="clDel('${k}')">Видалити клієнтку</button>`);
 if(still){const x=$('#ov .sh');x.scrollTop=sc;x.style.animation='none'}}
 function snIn(k,el){if(!S.cl[k])return;const v=el.value.replace(/\s*\n\s*/g,' ').slice(0,40);if(v!=el.value)el.value=v;S.cl[k].sn=v;$('#csc').textContent=v.length+'/40';render()}
 function snOut(k,el){if(!S.cl[k])return;const v=el.value.trim();el.value=v;S.cl[k].sn=v;const c=$('#csc');if(c)c.textContent=v.length+'/40';render()}
-function cliNew(k){const c=cliMap()[k];closeS();S.tab='cal';render();quick();if(c){$('#qn').value=c.name;$('#qp').value=c.phone}}
+function cliNew(k){const c=cliMap()[k];closeS();S.tab='cal';render();quick();if(c){$('#qn').value=c.name;$('#qp').value=c.phone;qFill(1)}}
 /* Зміна імені та кольору — вікно поверх картки */
 function clEd(k){const c=cliMap()[k];if(!c)return;S.cc=c.cl.c;sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Редагувати клієнтку</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div>
 <label class="f" for="cen">Ім’я <span class="rq">*</span></label><input id="cen" maxlength="60" value="${esc(c.name)}" oninput="clrE(this,'c')">
@@ -543,6 +581,12 @@ function cmAdd(k){const x=S.cd.trim();if(!x){S.cdE=1;cmS(k,1);$('#cmn').focus();
 function cmSv(k,id){const x=$('#cme').value.trim();if(!x){toast('Коментар не може бути порожнім');return}const m=S.cl[k].cms.find(y=>y.id==id);if(m){m.x=x;m.ed=Date.now()}S.ce=0;cmS(k,1);toast('Коментар змінено')}
 function cmDl(k,id){const m=S.cl[k].cms.find(y=>y.id==id);if(!m)return;sheet2(`<h2 style="margin-top:0">Видалити коментар?</h2><div class="cq sm cmt">${esc(m.x)}</div><p class="sm">Відновити його після видалення не вийде.</p><button class="btn" style="background:var(--bad);box-shadow:none" onclick="cmDlY('${k}',${id})">Так, видалити</button><button class="btn g" onclick="cmS('${k}',1)">Назад</button>`,1)}
 function cmDlY(k,id){S.cl[k].cms=S.cl[k].cms.filter(y=>y.id!=id);S.ce=0;cmS(k,1);cli(k,1);toast('Коментар видалено')}
+/* Додатковий час клієнтки: застосовується до майбутніх записів, де вміщається; решта лишаються без змін */
+function clExS(k,x){const c=cliMap()[k];if(!c||(c.cl.ex||0)==x)return;c.cl.ex=x;const L=c.v.filter(a=>clAct(a)&&st0(a)>Date.now()),bad=L.filter(a=>!exPut(a));render();cli(k,1);
+if(!bad.length){toast(L.length?`Збережено. Оновлено записів: ${L.length}`:'Збережено');return}
+sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Не всюди вмістилося</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div><p class="sm">Ці записи залишаються на своєму часі без +${x} хв. Нікого не скасовано й не перенесено. Якщо поруч звільниться час, додайте хвилини в редагуванні запису.</p>
+${bad.map(a=>`<button class="card ap" style="margin:8px 0" onclick="closeS();open_(${a.id})"><div class="b"><div><b>${esc(sv(a.svc).n)}</b><span class="chip ${a.st}">${ST[a.st]}</span></div><div class="sm mu">${dl(a.o,a.time)}</div></div></button>`).join('')}
+<button class="btn g" onclick="closeS2()">Зрозуміло</button>`)}
 /* Видалення клієнтки: минулі записи лишаються в календарі, активні записи й запити спершу треба вирішити */
 function clDel(k){const c=cliMap()[k];if(!c)return;const A=c.v.filter(clAct),R=S.reqs.filter(r=>r.st=='pending'&&pk(r.phone)==k);
 if(A.length||R.length){sheet2(`<div class="row2" style="align-items:flex-start"><h2 style="margin-top:0">Поки не можна видалити</h2><button class="xb" aria-label="Закрити" onclick="closeS2()">✕</button></div><p class="sm">У клієнтки ${esc(c.name)} є незавершені справи. Скасуйте запис або дочекайтеся його завершення, а запит підтвердьте чи відхиліть.</p>
